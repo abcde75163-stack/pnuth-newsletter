@@ -4,7 +4,6 @@ import time
 import datetime
 import json
 import shutil
-import math
 from google import genai
 from jinja2 import Template
 
@@ -154,25 +153,39 @@ html_template_str = """
 # ==========================================
 def main():
     st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
-    if not os.path.exists("temp"): os.makedirs("temp")
+    
+    st.title("🚀 PNUTH 뉴스레터 생성기 (통합 버전)")
+    st.info(PDF와 이미지 파일을 함께 업로드하세요.")
 
-    st.title("🚀 PNUTH 뉴스레터 생성기 (Gemini 2.5 Ver.)")
-    uploaded_files = st.file_uploader("PDF 업로드", type="pdf", accept_multiple_files=True)
+    # 1. 파일 업로드 섹션 (두 종류를 받습니다)
+    with st.expander("📂 파일 업로드 안내", expanded=True):
+        pdf_files = st.file_uploader("1. 특허 SMK PDF 파일들을 업로드하세요", type="pdf", accept_multiple_files=True)
+        img_files = st.file_uploader("2. 특허 이미지 파일들을 업로드하세요 (파일명은 출원번호와 일치시켜주세요)", 
+                                     type=["png", "jpg", "jpeg"], accept_multiple_files=True)
 
-    if uploaded_files:
+    if pdf_files:
         if st.button("뉴스레터 생성 시작"):
-            patent_list = []
-            progress_bar = st.progress(0)
+            # 이미지 파일 맵 구성 (파일명 기준 매칭)
+            # 여기서는 이미지를 서버에 올리는 대신, 이미지의 공개 URL을 생성하는 로직이 들어갑니다.
+            image_map = {os.path.splitext(img.name)[0]: img for img in img_files}
             
-            for idx, uploaded_file in enumerate(uploaded_files):
+            patent_list = []
+            for uploaded_file in pdf_files:
                 patent_id = uploaded_file.name.split('_')[0]
-                file_path = os.path.join("temp", uploaded_file.name)
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                st.write(f"🔍 {patent_id} 분석 및 이미지 매칭 중...")
                 
-                data = analyze_pdf_document(file_path)
+                # [분석 실행]
+                data = analyze_pdf_document(uploaded_file)
                 data['patent_id'] = patent_id
-                data['image_id'] = PATENT_IMAGE_IDS.get(patent_id, "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn")
+                
+                # 업로드된 이미지 중 번호가 일치하는 것이 있다면 해당 URL 사용
+                # (실제 운영 시에는 이 이미지를 본인의 웹 서버나 GitHub에 자동으로 올리는 코드가 추가됩니다)
+                if patent_id in image_map:
+                    # 테스트용: 일단 로컬 저장 후 경로 반환 (메일용으로는 외부 서버 업로드 필요)
+                    data['image_url'] = f"https://your-server-url.com/images/{patent_id}.png"
+                else:
+                    data['image_url'] = "기본_이미지_URL"
+                
                 patent_list.append(data)
                 
                 progress_bar.progress((idx + 1) / len(uploaded_files))
