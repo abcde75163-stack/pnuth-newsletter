@@ -155,7 +155,7 @@ def main():
     st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
     
     st.title("🚀 PNUTH 뉴스레터 생성기 (통합 버전)")
-    st.info(PDF와 이미지 파일을 함께 업로드하세요.")
+    st.info("PDF와 이미지 파일을 함께 업로드하세요.")
 
     # 1. 파일 업로드 섹션 (두 종류를 받습니다)
     with st.expander("📂 파일 업로드 안내", expanded=True):
