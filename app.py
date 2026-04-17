@@ -1,74 +1,80 @@
 import streamlit as st
 import os
+import time
 import datetime
+import json
+import shutil
+import math
+from google import genai
 from jinja2 import Template
 
-# [기존 설정 및 함수들 유지: API_KEY, analyze_pdf_document, html_template_str 등]
+# ==========================================
+# 1. 시스템 설정 (Streamlit Secrets 활용)
+# ==========================================
+# 클라우드 배포 시 Settings -> Secrets에 등록한 키를 가져옵니다.
+# 로컬 테스트 시에는 직접 문자열을 넣어도 되지만, 보안을 위해 secrets 권장합니다.
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except:
+    API_KEY = "여기에_직접_API키를_넣어_로컬테스트_가능"
 
-def main():
-    st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
+MODEL_ID = "gemini-2.5-flash"
+client = genai.Client(api_key=API_KEY)
+
+# 기존 이미지 ID 및 URL 설정 (기존 코드와 동일)
+LOGO_IMAGE_ID = "1WjzjlOOetztrcgq6rioAZxTzi_K-JwLl"
+BUILDING_IMAGE_ID = "1f7XwQ2Z-43sECHQ53Of0J8NzqOeRh9Ll"
+CONSULT_URL = "https://clever-designers-959477.framer.app/pium-%EA%B8%B0%EC%88%A0%EC%82%AC%EC%97%85%ED%99%94-%EC%84%BC%ED%84%B0-%EC%88%98%EC%9A%94%EA%B8%B0%EC%88%A0-%EC%A0%91%EC%88%98-%ED%8E%98%EC%9D%B4%EC%A7%80"
+PR_URL = "https://link.inpock.co.kr/pnutlo?utm_source=ig&utm_medium=social&utm_content=link_in_bio"
+GOOGLE_DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1bgCruhVa2AE_eH1OEq7lbZykQavFlw6S?hl=ko"
+
+PATENT_IMAGE_IDS = {
+    "10-2023-0143794": "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn",
+    "10-2025-0105146": "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn",
+    "10-2025-0108357": "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn",
+    "10-2026-0061085": "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn",
+}
+
+TECH_CATEGORIES = ["바이오", "의료기기", "기계", "재료", "전기전자", "정보통신", "에너지자원", "원자력", "건설교통"]
+
+# ==========================================
+# 2. 유틸리티 및 분석 함수 (여기에 정의되어 있어야 합니다)
+# ==========================================
+def get_week_of_month(dt):
+    first_day = dt.replace(day=1)
+    adjusted_dom = dt.day + first_day.weekday()
+    return int(math.ceil(adjusted_dom / 7.0))
+
+def analyze_pdf_document(file_path):
+    """PDF 분석 함수 로직"""
+    temp_upload_path = "temp_process.pdf"
+    categories_str = ", ".join(TECH_CATEGORIES)
     
-# [추가] temp 폴더가 없으면 자동으로 생성하는 로직
-    if not os.path.exists("temp"):
-        os.makedirs("temp")
-
-    st.title("🚀 PNUTH 뉴스레터 자동 생성기")
-    st.info("행정 직원용: PDF 파일을 업로드하면 뉴스레터 HTML 코드가 생성됩니다.")
-
-    # 1. 파일 업로드 섹션
-    uploaded_files = st.file_uploader("특허 SMK PDF 파일들을 선택하세요 (다중 선택 가능)", 
-                                    type="pdf", accept_multiple_files=True)
-
-    if uploaded_files:
-        st.write(f"✅ 총 {len(uploaded_files)}개의 파일이 선택되었습니다.")
+    try:
+        shutil.copy2(file_path, temp_upload_path)
+        uploaded_doc = client.files.upload(file=temp_upload_path)
         
-        if st.button("뉴스레터 생성 시작"):
-            patent_list = []
-            progress_bar = st.progress(0)
-            
-            for idx, uploaded_file in enumerate(uploaded_files):
-                # 임시 파일 저장 및 분석 로직
-                with open(os.path.join("temp", uploaded_file.name), "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
-                patent_id = uploaded_file.name.split('_')[0]
-                st.write(f"🔍 {patent_id} 분석 중...")
-                
-                # 분석 함수 호출 (기존 analyze_pdf_document 활용)
-                data = analyze_pdf_document(os.path.join("temp", uploaded_file.name))
-                data['patent_id'] = patent_id
-                data['image_id'] = PATENT_IMAGE_IDS.get(patent_id, "")
-                patent_list.append(data)
-                
-                # 진행률 업데이트
-                progress_bar.progress((idx + 1) / len(uploaded_files))
+        prompt = f"""
+        특허 마케팅 전문가로서 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+        분석 항목:
+        1. title: 기업 관점의 마케팅용 기술 명칭
+        2. summary: 특장점 위주로 3개의 짧은 문장 리스트
+        3. category: [{categories_str}] 중 선택
+        응답 형식: {{"title": "기술명", "summary": ["문장1", "문장2", "문장3"], "category": "분야명"}}
+        """
+        response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
+        client.files.delete(name=uploaded_doc.name)
+        
+        raw_text = response.text.strip()
+        if "
+http://googleusercontent.com/immersive_entry_chip/0
 
-            # HTML 생성
-            grouped_patents = group_patents_by_category(patent_list)
-            now = datetime.datetime.now()
-            week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}째주"
-            
-            template = Template(html_template_str)
-            result_html = template.render(
-                week_date=week_str,
-                grouped_patents=grouped_patents,
-                # ... 기타 변수들
-            )
+### 💡 확인 포인트
+1.  **함수 정의 위치:** `analyze_pdf_document` 정의가 `main()` 함수보다 코드상 **위쪽**에 있어야 합니다.
+2.  **전역 변수:** `API_KEY`나 `PATENT_IMAGE_IDS` 같은 변수들도 함수 밖 상단에 잘 정의되어 있는지 확인하세요.
+3.  **들여쓰기:** `if __name__ == "__main__":` 은 반드시 맨 왼쪽 벽에 붙어 있어야 합니다.
 
-            # 2. 결과물 출력 및 다운로드
-            st.success("🎉 뉴스레터 생성이 완료되었습니다!")
-            
-            # HTML 미리보기 (직원분이 복사하기 편하도록)
-            st.subheader("📋 생성된 HTML 코드 (복사해서 메일에 붙여넣으세요)")
-            st.code(result_html, language='html')
-            
-            # 파일로 다운로드 버튼
-            st.download_button(
-                label="HTML 파일로 다운로드",
-                data=result_html,
-                file_name=f"newsletter_{now.strftime('%Y%m%d')}.html",
-                mime="text/html"
-            )
+파일을 저장하고 다시 실행하면 정상적으로 동작할 것입니다!
 
 if __name__ == "__main__":
     main()
