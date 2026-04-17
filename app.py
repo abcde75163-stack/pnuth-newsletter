@@ -10,23 +10,18 @@ from google import genai
 from jinja2 import Template
 
 # ==========================================
-# 1. 시스템 설정 (Streamlit Secrets 활용)
+# 1. 시스템 설정 (Streamlit Secrets 필수 등록)
 # ==========================================
-# [주의] Streamlit Cloud의 Settings -> Secrets에 아래 항목들을 등록해야 합니다.
-# GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO
-try:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
-    GH_TOKEN = st.secrets["GITHUB_TOKEN"]
-    GH_REPO = st.secrets["GITHUB_REPO"] # 예: "아이디/저장소명"
-except Exception as e:
-    st.error("Secrets 설정이 누락되었습니다. GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO를 확인하세요.")
-    st.stop()
+# GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO 설정 확인 필요
+API_KEY = st.secrets["GEMINI_API_KEY"]
+GH_TOKEN = st.secrets["GITHUB_TOKEN"]
+GH_REPO = st.secrets["GITHUB_REPO"]
 
-# 모델 설정 (Gemini 2.5 Flash)
-MODEL_ID = "gemini-2.5-flash" 
+# 모델 설정 (Gemini 2.0 Flash)
+MODEL_ID = "gemini-2.0-flash" 
 client = genai.Client(api_key=API_KEY)
 
-# 고정 리소스 주소 (로고 및 배경)
+# 고정 리소스 및 배너 URL
 LOGO_URL = "https://lh3.googleusercontent.com/d/1WjzjlOOetztrcgq6rioAZxTzi_K-JwLl"
 BLDG_URL = "https://lh3.googleusercontent.com/d/1f7XwQ2Z-43sECHQ53Of0J8NzqOeRh9Ll"
 CONSULT_URL = "https://clever-designers-959477.framer.app/pium-%EA%B8%B0%EC%88%A0%EC%82%AC%EC%97%85%ED%99%94-%EC%84%BC%ED%84%B0-%EC%88%98%EC%9A%94%EA%B8%B0%EC%88%A0-%EC%A0%91%EC%88%98-%ED%8E%98%EC%9D%B4%EC%A7%80"
@@ -56,49 +51,33 @@ def upload_to_github(file_obj, patent_id):
         "Accept": "application/vnd.github.v3+json"
     }
     
-    # 기존 파일이 있는지 확인하여 SHA 값 획득 (덮어쓰기용)
     res = requests.get(url, headers=headers)
     sha = res.json().get('sha') if res.status_code == 200 else None
     
     payload = {
-        "message": f"Update patent image: {patent_id}",
+        "message": f"Update image: {patent_id}",
         "content": base64.b64encode(file_content).decode("utf-8")
     }
-    if sha:
-        payload["sha"] = sha
+    if sha: payload["sha"] = sha
     
     put_res = requests.put(url, headers=headers, json=payload)
     if put_res.status_code in [200, 201]:
         user_id, repo_name = GH_REPO.split('/')
-        # Raw 데이터 링크 반환 (메일 클라이언트에서 접근 가능)
         return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
-    else:
-        st.error(f"GitHub 업로드 실패 ({patent_id}): {put_res.text}")
-        return "https://via.placeholder.com/220?text=Upload+Error"
+    return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj):
-    """PDF 파일을 Gemini로 분석하여 기술 요약 정보 추출"""
+    """PDF 분석 및 요약 정보 추출 (Gemini 사용)"""
     temp_path = f"temp_{int(time.time())}.pdf"
     try:
         with open(temp_path, "wb") as f:
             f.write(file_obj.getbuffer())
-        
         with open(temp_path, "rb") as f:
             uploaded_doc = client.files.upload(file=f, config={'mime_type': 'application/pdf'})
         
-        prompt = f"""
-        특허 마케팅 전문가로서 아래 PDF 내용을 분석하여 JSON 형식으로만 응답하세요.
-        - title: 기업이 매력을 느낄만한 기술 명칭
-        - summary: 주요 특징 위주의 3문장 리스트
-        - category: {TECH_CATEGORIES} 중 가장 적절한 하나 선택
-        형식: {{"title": "기술명", "summary": ["문장1", "문장2", "문장3"], "category": "분야"}}
-        """
-        
+        prompt = f"특허 PDF를 분석하여 JSON 형식으로만 응답하세요. 항목: title, summary(3개 문장 리스트), category({TECH_CATEGORIES} 중 택1)"
         response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
         
-        try: client.files.delete(name=uploaded_doc.name)
-        except: pass
-            
         raw_text = response.text.strip()
         if "```json" in raw_text:
             raw_text = raw_text.split("```json")[1].split("```")[0].strip()
@@ -107,22 +86,20 @@ def analyze_pdf_document(file_obj):
             
         return json.loads(raw_text)
     except Exception as e:
-        return {"title": "분석 지연", "summary": ["상세 내용은 SMK를 확인해주세요.", f"사유: {str(e)[:30]}"], "category": "기타"}
+        return {"title": "분석 지연", "summary": [f"상세 내용은 SMK를 확인해주세요.", f"사유: {str(e)[:30]}"], "category": "기타"}
     finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        if os.path.exists(temp_path): os.remove(temp_path)
 
 def group_patents_by_category(patent_list):
-    """분야별로 특허 리스트 그룹화"""
+    """카테고리별 특허 그룹화"""
     grouped = {}
     for cat in TECH_CATEGORIES + ["기타"]:
         match = [p for p in patent_list if p.get("category") == cat]
-        if match:
-            grouped[cat] = match
+        if match: grouped[cat] = match
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿
+# 3. 뉴스레터 HTML 템플릿 (배너 복구 버전)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -172,6 +149,7 @@ html_template_str = """
     <td align="center" style="padding:40px 10px 20px 10px;">
       <a href="{{ drive_url }}" style="display:block; width:100%; max-width:400px; background-color:#005BAC; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📄 기술요약서(SMK) 전체보기</a>
       <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
+      <a href="{{ pr_url }}" style="display:block; width:100%; max-width:400px; background-color:#555555; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📺 PNUTH 홍보 채널 바로가기</a>
     </td>
   </tr>
   <tr><td align="center" style="padding-top:20px; font-size:12px; color:gray; line-height:1.5;">부산대학교기술지주주식회사 | 부산광역시 금정구 부산대학로63번길 2<br>문의: 기술이전팀 최정식 과장(051-510-7024)</td></tr>
@@ -182,40 +160,38 @@ html_template_str = """
 """
 
 # ==========================================
-# 4. Streamlit 메인 앱 실행
+# 4. Streamlit 메인 실행
 # ==========================================
 def main():
-    st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀", layout="centered")
-    
-    st.title("🚀 PNUTH 뉴스레터 생성기 (GitHub 서버형)")
-    st.info("PDF 파일들과 대응하는 이미지 파일들을 함께 업로드하세요. (파일명 번호 일치 필수)")
+    st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
+    st.title("🚀 PNUTH 뉴스레터 자동 생성기")
+    st.info("PDF와 이미지 파일을 함께 업로드하세요. (파일명 번호 일치 필수)")
 
-    # 파일 업로드 섹션
     col1, col2 = st.columns(2)
     with col1:
-        pdf_files = st.file_uploader("1. SMK PDF 파일들을 선택하세요", type="pdf", accept_multiple_files=True)
+        pdf_files = st.file_uploader("1. SMK PDF들", type="pdf", accept_multiple_files=True)
     with col2:
-        img_files = st.file_uploader("2. 특허 이미지 파일들을 선택하세요", type=["png", "jpg"], accept_multiple_files=True)
+        img_files = st.file_uploader("2. 특허 이미지들", type=["png", "jpg"], accept_multiple_files=True)
 
     if pdf_files:
         if st.button("뉴스레터 생성 시작"):
-            # 이미지 매핑 준비
             image_map = {os.path.splitext(img.name)[0]: img for img in img_files}
-            
             patent_list = []
             status_text = st.empty()
             progress_bar = st.progress(0)
             
             for idx, uploaded_file in enumerate(pdf_files):
-                # 파일명에서 출원번호 추출 (첫 번째 언더바 앞부분)
                 patent_id = uploaded_file.name.split('_')[0]
                 status_text.text(f"⏳ {patent_id} 처리 중... ({idx+1}/{len(pdf_files)})")
                 
-                # 1. AI 분석 수행
+                # 429 에러 방지를 위한 2초 지연
+                time.sleep(2)
+                
+                # AI 분석 및 데이터 매칭
                 data = analyze_pdf_document(uploaded_file)
                 data['patent_id'] = patent_id
                 
-                # 2. GitHub 서버 이미지 업로드 및 개별 주소 할당
+                # GitHub 서버 이미지 업로드
                 if patent_id in image_map:
                     data['image_url'] = upload_to_github(image_map[patent_id], patent_id)
                 else:
@@ -223,12 +199,10 @@ def main():
                 
                 patent_list.append(data)
                 progress_bar.progress((idx + 1) / len(pdf_files))
-                time.sleep(1)
 
             status_text.success("🎉 분석 및 이미지 서버 저장 완료!")
-            progress_bar.empty()
-
-            # 3. HTML 렌더링
+            
+            # 최종 HTML 렌더링
             grouped_patents = group_patents_by_category(patent_list)
             now = datetime.datetime.now()
             week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}째주"
@@ -240,24 +214,13 @@ def main():
                 logo_url=LOGO_URL,
                 bldg_url=BLDG_URL,
                 drive_url=DRIVE_URL,
-                consult_url=CONSULT_URL
+                consult_url=CONSULT_URL,
+                pr_url=PR_URL
             )
 
-            # 4. 결과 출력 및 다운로드
             st.divider()
-            st.subheader("📄 결과물 다운로드")
-            st.download_button(
-                label="📂 완성된 뉴스레터 HTML 다운로드",
-                data=result_html,
-                file_name=f"PNUTH_Newsletter_{now.strftime('%Y%m%d')}.html",
-                mime="text/html"
-            )
-            
-            with st.expander("🔗 HTML 소스 코드 복사"):
-                st.code(result_html, language="html")
-                st.info("이 코드를 복사하여 메일 작성기(네이버, 아웃룩 등)의 'HTML 편집' 모드에 붙여넣으세요.")
-            
-            st.subheader("👀 미리보기")
+            st.download_button("📂 뉴스레터 HTML 다운로드", data=result_html, file_name=f"newsletter_{now.strftime('%Y%m%d')}.html", mime="text/html")
+            st.code(result_html, language="html")
             st.components.v1.html(result_html, height=800, scrolling=True)
 
 if __name__ == "__main__":
