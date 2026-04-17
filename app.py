@@ -16,8 +16,8 @@ try:
 except Exception:
     API_KEY = "여기에_직접_API키를_넣어_로컬테스트_가능"
 
-# 모델명을 가장 안정적인 1.5-flash로 설정합니다.
-MODEL_ID = "gemini-1.5-flash"
+# 모델명을 가장 안정적인 2.5-flash로 설정합니다.
+MODEL_ID = "gemini-2.5-flash"
 client = genai.Client(api_key=API_KEY)
 
 LOGO_IMAGE_ID = "1WjzjlOOetztrcgq6rioAZxTzi_K-JwLl"
