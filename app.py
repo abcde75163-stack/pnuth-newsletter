@@ -13,10 +13,11 @@ from jinja2 import Template
 # ==========================================
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
-except:
+except Exception:
     API_KEY = "여기에_직접_API키를_넣어_로컬테스트_가능"
 
-MODEL_ID = "gemini-2.0-flash" # 모델 ID 확인 필요 (일반적으로 gemini-2.0-flash 사용)
+# 모델명을 가장 안정적인 1.5-flash로 설정합니다.
+MODEL_ID = "gemini-1.5-flash"
 client = genai.Client(api_key=API_KEY)
 
 LOGO_IMAGE_ID = "1WjzjlOOetztrcgq6rioAZxTzi_K-JwLl"
@@ -43,48 +44,59 @@ def get_week_of_month(dt):
     return int(math.ceil(adjusted_dom / 7.0))
 
 def analyze_pdf_document(file_path):
-    temp_upload_path = f"temp_{int(time.time())}.pdf"
-    categories_str = ", ".join(TECH_CATEGORIES)
+    # 각 파일 분석 시 고유한 임시 파일명 사용
+    temp_process_path = f"process_{int(time.time())}.pdf"
     
     try:
-        shutil.copy2(file_path, temp_upload_path)
-        uploaded_doc = client.files.upload(path=temp_upload_path)
+        shutil.copy2(file_path, temp_process_path)
+        # 클라우드 환경에서는 path 인자를 명시적으로 사용합니다.
+        uploaded_doc = client.files.upload(path=temp_process_path)
         
         prompt = f"""
         특허 마케팅 전문가로서 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
         분석 항목:
         1. title: 기업 관점의 마케팅용 기술 명칭
         2. summary: 특장점 위주로 3개의 짧은 문장 리스트
-        3. category: [{categories_str}] 중 선택
+        3. category: {TECH_CATEGORIES} 중 가장 적합한 하나 선택
         응답 형식: {{"title": "기술명", "summary": ["문장1", "문장2", "문장3"], "category": "분야명"}}
         """
+        
         response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
         client.files.delete(name=uploaded_doc.name)
         
         raw_text = response.text.strip()
+        # JSON 블록 추출 로직
         if "```json" in raw_text:
             raw_text = raw_text.split("```json")[1].split("```")[0].strip()
         elif "```" in raw_text:
             raw_text = raw_text.split("```")[1].split("```")[0].strip()
             
         return json.loads(raw_text)
+        
     except Exception as e:
-        return {"title": "분석 지연", "summary": [f"상세 내용은 SMK를 확인해주세요."], "category": "기타"}
+        # 분석 실패 시 에러 정보를 포함하여 반환
+        return {
+            "title": "기술 분석 진행 중",
+            "summary": ["상세 내용은 하단 SMK 전체보기를 활용해 주세요.", f"사유: {str(e)[:30]}"],
+            "category": "기타"
+        }
     finally:
-        if os.path.exists(temp_upload_path):
-            os.remove(temp_upload_path)
+        if os.path.exists(temp_process_path):
+            os.remove(temp_process_path)
 
 def group_patents_by_category(patent_list):
     grouped = {}
     for cat in TECH_CATEGORIES:
         match = [p for p in patent_list if p.get("category") == cat]
-        if match: grouped[cat] = match
+        if match:
+            grouped[cat] = match
     others = [p for p in patent_list if p.get("category") not in TECH_CATEGORIES]
-    if others: grouped["기타"] = others
+    if others:
+        grouped["기타"] = others
     return grouped
 
 # ==========================================
-# 3. HTML 템플릿
+# 3. HTML 템플릿 (CSS/레이아웃 최적화)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -122,7 +134,7 @@ html_template_str = """
     <td width="50%" valign="top" style="padding:10px;">
       <table width="100%" style="border:1px solid #ddd; border-radius:10px; min-height:420px;">
         <tr><td style="padding:15px; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4;">{{ patent.title }} ({{ patent.patent_id }})</td></tr>
-        <tr><td align="center"><img src="https://lh3.googleusercontent.com/d/{{ patent.image_id }}" width="220" style="border-radius:10px;"></td></tr>
+        <tr><td align="center"><img src="https://lh3.googleusercontent.com/d/{{ patent.image_id }}" width="220" style="border-radius:10px; border:1px solid #eee;"></td></tr>
         <tr><td style="padding:15px; font-size:14px; line-height:1.7; color:#444;">{% for s in patent.summary %}<p style="margin:0 0 6px 0;">• {{ s }}</p>{% endfor %}</td></tr>
       </table>
     </td>
@@ -132,12 +144,12 @@ html_template_str = """
   {% endfor %}
   <tr>
     <td align="center" style="padding:40px 10px 20px 10px;">
-      <a href="{{ drive_url }}" style="display:block; width:100%; max-width:400px; background-color:#005BAC; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px;">📄 기술요약서(SMK) 전체보기</a>
-      <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px;">💡 수요기술 상담신청</a>
-      <a href="{{ pr_url }}" style="display:block; width:100%; max-width:400px; background-color:#555555; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px;">📺 PNUTH 홍보 채널 바로가기</a>
+      <a href="{{ drive_url }}" style="display:block; width:100%; max-width:400px; background-color:#005BAC; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📄 기술요약서(SMK) 전체보기</a>
+      <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
+      <a href="{{ pr_url }}" style="display:block; width:100%; max-width:400px; background-color:#555555; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📺 PNUTH 홍보 채널 바로가기</a>
     </td>
   </tr>
-  <tr><td align="center" style="padding-top:20px; font-size:12px; color:gray;">부산대학교기술지주주식회사 | 부산광역시 금정구 부산대학로63번길 2<br>문의: 기술이전팀 최정식 과장(051-510-7024)</td></tr>
+  <tr><td align="center" style="padding-top:20px; font-size:12px; color:gray; line-height:1.5;">부산대학교기술지주주식회사 | 부산광역시 금정구 부산대학로63번길 2<br>문의: 기술이전팀 최정식 과장(051-510-7024)</td></tr>
 </table>
 </td></tr></table>
 </body>
@@ -145,42 +157,51 @@ html_template_str = """
 """
 
 # ==========================================
-# 4. 웹 UI (Streamlit)
+# 4. Streamlit 메인 실행부
 # ==========================================
 def main():
     st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
-    if not os.path.exists("temp"): os.makedirs("temp")
+    
+    # temp 폴더 자동 생성
+    if not os.path.exists("temp"):
+        os.makedirs("temp")
 
     st.title("🚀 PNUTH 뉴스레터 자동 생성기")
-    st.markdown("---")
+    st.info("행정 직원용: PDF 파일을 업로드하면 뉴스레터용 HTML 파일이 생성됩니다.")
     
-    uploaded_files = st.file_uploader("특허 SMK PDF 파일들을 업로드하세요", type="pdf", accept_multiple_files=True)
+    uploaded_files = st.file_uploader("SMK PDF 파일들을 업로드하세요", type="pdf", accept_multiple_files=True)
 
     if uploaded_files:
         if st.button("뉴스레터 생성 시작"):
             patent_list = []
-            status_text = st.empty()
+            status_placeholder = st.empty()
             progress_bar = st.progress(0)
             
             for idx, uploaded_file in enumerate(uploaded_files):
                 patent_id = uploaded_file.name.split('_')[0]
-                status_text.text(f"⏳ {patent_id} 분석 중... ({idx+1}/{len(uploaded_files)})")
+                status_placeholder.text(f"⏳ {patent_id} 기술 분석 중... ({idx+1}/{len(uploaded_files)})")
                 
+                # 파일 임시 저장
                 file_path = os.path.join("temp", uploaded_file.name)
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 
+                # 분석 실행
                 data = analyze_pdf_document(file_path)
                 data['patent_id'] = patent_id
+                # 딕셔너리에 없는 번호는 기본 이미지 사용
                 data['image_id'] = PATENT_IMAGE_IDS.get(patent_id, "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn")
-                patent_list.append(data)
                 
+                patent_list.append(data)
                 progress_bar.progress((idx + 1) / len(uploaded_files))
+                
+                # API 안정성을 위해 잠시 대기
                 if idx < len(uploaded_files) - 1:
-                    time.sleep(2) # 할당량에 따라 조절
+                    time.sleep(2)
 
-            status_text.success("🎉 모든 기술 분석이 완료되었습니다!")
+            status_placeholder.success("🎉 모든 기술 분석 및 분류가 완료되었습니다!")
             
+            # 최종 HTML 생성
             grouped_patents = group_patents_by_category(patent_list)
             now = datetime.datetime.now()
             week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}째주"
@@ -196,10 +217,19 @@ def main():
                 pr_url=PR_URL
             )
 
-            st.markdown("---")
-            st.subheader("📋 생성 결과")
-            st.download_button(label="HTML 파일 다운로드", data=result_html, file_name=f"newsletter_{now.strftime('%Y%m%d')}.html", mime="text/html")
-            st.text_area("HTML 소스 코드 (복사해서 사용하세요)", value=result_html, height=300)
+            st.divider()
+            st.subheader("📋 결과물 다운로드")
+            
+            # 파일 다운로드 버튼
+            st.download_button(
+                label="📁 생성된 뉴스레터 HTML 다운로드",
+                data=result_html,
+                file_name=f"newsletter_{now.strftime('%Y%m%d')}.html",
+                mime="text/html"
+            )
+            
+            # 소스코드 복사용 텍스트 영역
+            st.text_area("HTML 소스 코드 (복사해서 메일에 사용하세요)", value=result_html, height=300)
 
 if __name__ == "__main__":
     main()
