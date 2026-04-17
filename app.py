@@ -173,25 +173,31 @@ def main():
 
     if pdf_files:
         if st.button("뉴스레터 생성 시작"):
+            # 1. 업로드된 이미지들을 파일명(출원번호) 기준으로 딕셔너리화
+            # 예: {'10-2023-1234567': <UploadedFile...>}
+            image_map = {os.path.splitext(img.name)[0]: img for img in img_files}
+            
             patent_list = []
             status_placeholder = st.empty()
-            progress_bar = st.progress(0)
             
             for idx, uploaded_file in enumerate(pdf_files):
-                # 파일명에서 출원번호 추출 (예: 10-2023-0143794_SMK.pdf -> 10-2023-0143794)
                 patent_id = uploaded_file.name.split('_')[0]
-                status_placeholder.text(f"⏳ {patent_id} 기술 분석 중... ({idx+1}/{len(pdf_files)})")
+                status_placeholder.text(f"⏳ {patent_id} 분석 및 이미지 매칭 중...")
                 
-                # AI 분석 실행
                 data = analyze_pdf_document(uploaded_file)
                 data['patent_id'] = patent_id
                 
-                # 이미지 매칭 (현재는 구글 드라이브 ID 체계 유지, 이후 URL 자동화 적용 가능)
-                data['image_id'] = "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn" # 기본 이미지 ID
+                # 2. [수정 포인트] 이미지 매칭 로직
+                # 파일명이 일치하는 이미지가 있다면 해당 이미지의 ID를 사용 (현재는 임시 ID 체계)
+                # 만약 Imgur 자동화를 사용하지 않는다면, 여기에 각 특허별 구글 드라이브 ID가 들어가야 합니다.
+                if patent_id in image_map:
+                    # 현재는 임시로 고정 ID를 넣게 되어 있으나, 
+                    # 실제로는 image_map[patent_id]를 처리한 URL이나 ID가 들어가야 합니다.
+                    data['image_id'] = "실제_매칭된_이미지_ID_또는_URL" 
+                else:
+                    data['image_id'] = "1nhOb0YQTMDT3C5wHat70YfHtsBq3Tiqn" # 기본 이미지
                 
                 patent_list.append(data)
-                progress_bar.progress((idx + 1) / len(pdf_files))
-                time.sleep(1)
 
             status_placeholder.success("🎉 모든 기술 분석이 완료되었습니다!")
             progress_bar.empty()
