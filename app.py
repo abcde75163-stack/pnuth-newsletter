@@ -18,7 +18,7 @@ except Exception:
     API_KEY = "YOUR_LOCAL_API_KEY_FOR_TEST"
 
 # 모델명을 v1beta 버전에 맞는 전체 경로 형식으로 수정
-MODEL_ID = "gemini-1.5-flash" 
+MODEL_ID = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
 
 LOGO_IMAGE_ID = "1WjzjlOOetztrcgq6rioAZxTzi_K-JwLl"
