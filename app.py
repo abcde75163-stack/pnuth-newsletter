@@ -122,7 +122,52 @@ def main():
 
             # HTML 생성 및 다운로드 (이하 기존 로직과 동일)
             status_text.success("🎉 분석 완료!")
-            # [결과 렌더링 및 다운로드 버튼 코드...]
+            # 모든 분석이 끝난 후 실행되는 구간입니다.
+            status_text.success("🎉 모든 기술 분석이 완료되었습니다!")
+            progress_bar.empty() # 진행바 제거
+
+            if patent_list:
+                # 1. 카테고리별 그룹화
+                grouped_patents = group_patents_by_category(patent_list)
+                
+                # 2. 날짜 정보 생성
+                now = datetime.datetime.now()
+                week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}째주"
+                
+                # 3. HTML 템플릿 렌더링
+                template = Template(html_template_str)
+                result_html = template.render(
+                    week_date=week_str,
+                    grouped_patents=grouped_patents,
+                    drive_url=GOOGLE_DRIVE_FOLDER_URL,
+                    logo_id=LOGO_IMAGE_ID,
+                    bldg_id=BUILDING_IMAGE_ID,
+                    consult_url=CONSULT_URL,
+                    pr_url=PR_URL
+                )
+
+                # 4. 화면에 결과물 표시 및 다운로드 버튼 생성
+                st.divider()
+                st.subheader("📄 생성된 뉴스레터 미리보기")
+                
+                # HTML 다운로드 버튼 (이 버튼이 있어야 파일 저장이 가능합니다)
+                st.download_button(
+                    label="📂 뉴스레터 HTML 파일 다운로드",
+                    data=result_html,
+                    file_name=f"PNUTH_Newsletter_{now.strftime('%Y%m%d')}.html",
+                    mime="text/html",
+                    help="클릭하면 완성된 뉴스레터 파일을 내 컴퓨터에 저장합니다."
+                )
+
+                # 복사/붙여넣기용 소스 코드 영역
+                with st.expander("🔗 HTML 소스 코드 복사 (메일 발송용)"):
+                    st.code(result_html, language="html")
+                    st.info("위 코드를 복사하여 메일 작성기의 'HTML 편집' 모드에 붙여넣으세요.")
+                
+                # 실제 화면에 미리보기 출력
+                st.components.v1.html(result_html, height=800, scrolling=True)
+            else:
+                st.warning("분석된 특허 데이터가 없습니다. PDF 파일을 다시 확인해 주세요.")
 
 if __name__ == "__main__":
     main()
