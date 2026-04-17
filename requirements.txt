@@ -1,0 +1,3 @@
+google-genai
+jinja2
+streamlit
