@@ -17,8 +17,8 @@ API_KEY = st.secrets["GEMINI_API_KEY"]
 GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
 
-# 모델 설정 (Gemini 2.0 Flash)
-MODEL_ID = "gemini-2.0-flash" 
+# 모델 설정 (Gemini 2.5 Flash)
+MODEL_ID = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
 
 # 고정 리소스 및 배너 URL
