@@ -163,7 +163,7 @@ html_template_str = """
         
         <div style="padding: 15px; margin-top: auto;">
           <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
-            <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
+            <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
           </div>
         </div>
         
