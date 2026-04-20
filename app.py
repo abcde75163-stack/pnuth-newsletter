@@ -59,14 +59,14 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj, test_mode=False):
-    """PDF 분석 (테스트 모드 켜면 API 호출 없이 즉시 가짜 데이터 반환)"""
+    """PDF 분석 (테스트 모드 지원)"""
     if test_mode:
         return {
             "title": "[테스트] 초고강도 하이브리드 금속-플라스틱 결합 신소재 기술 개발",
             "summary": [
-                "API를 호출하지 않는 테스트 모드입니다! 내용이 아무리 길어져도 좌측과 우측 카드의 큰 틀(테두리) 높이가 무조건 똑같이 맞춰지는지 확인하기 위해 일부러 아주 긴 문장을 작성해 보았습니다.",
+                "API를 호출하지 않는 테스트 모드입니다!",
                 "테두리를 바깥쪽 칸(TD)에 직접 부여하는 방식으로 구조를 변경하여, 내용물 높이가 달라도 레이아웃이 깨지지 않습니다.",
-                "디자인과 글씨 크기, 버튼 위치가 마음에 드실 때까지 이 테스트 모드로 무제한(0원) 생성해보세요!"
+                "디자인과 글씨 크기, 버튼 위치가 마음에 드실 때까지 무제한 생성해보세요!"
             ],
             "category": "테스트분야"
         }
@@ -102,7 +102,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (좌우 높이 완벽 동기화)
+# 3. 뉴스레터 HTML 템플릿 (이미지 세로 크기 강제 고정 적용)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -150,11 +150,13 @@ html_template_str = """
             </p>
           </td>
         </tr>
+        
         <tr>
           <td align="center" valign="top" style="padding:0 15px 15px 15px;">
-            <img src="{{ patent.image_url }}" width="220" style="border-radius:10px; border:1px solid #eee; object-fit:cover;">
+            <img src="{{ patent.image_url }}" width="220" height="150" style="border-radius:10px; border:1px solid #eee; object-fit:cover;">
           </td>
         </tr>
+        
         <tr>
           <td valign="top" style="padding:0 15px; height:100%;">
             <div style="font-size:15px; line-height:1.7; color:#333; word-break:keep-all;">
@@ -176,13 +178,16 @@ html_template_str = """
     
     {% if loop.index0 % 2 == 0 %}
       {% if loop.last %}
-        <td width="4%"></td><td width="48%"></td> {% else %}
-        <td width="4%"></td> {% endif %}
+        <td width="4%"></td><td width="48%"></td>
+      {% else %}
+        <td width="4%"></td>
+      {% endif %}
     {% endif %}
     
     {% if loop.index0 % 2 == 1 or loop.last %}
     </tr>
-    <tr><td colspan="3" height="20"></td></tr> {% endif %}
+    <tr><td colspan="3" height="20"></td></tr>
+    {% endif %}
     {% endfor %}
     </table>
   </td></tr>
@@ -209,7 +214,6 @@ def main():
     st.title("🚀 PNUTH 뉴스레터 자동 생성기")
     st.info("PDF와 이미지 파일을 함께 업로드하세요. (파일명 번호 일치 필수)")
 
-    # 추가된 기능: API 한도 소모 없이 무제한 디자인 테스트 가능!
     is_test_mode = st.checkbox("🧪 테스트 모드 켜기 (체크 시 API 요금이 나가지 않으며 초고속으로 레이아웃만 확인합니다.)")
 
     col1, col2 = st.columns(2)
@@ -229,15 +233,12 @@ def main():
                 patent_id = uploaded_file.name.split('_')[0]
                 status_text.text(f"⏳ {patent_id} 처리 중... ({idx+1}/{len(pdf_files)})")
                 
-                # 테스트 모드가 아닐 때만 2초 쉬기
                 if not is_test_mode:
                     time.sleep(2)
                 
-                # 테스트 모드 여부를 함수에 전달
                 data = analyze_pdf_document(uploaded_file, test_mode=is_test_mode)
                 data['patent_id'] = patent_id
                 
-                # 이미지/PDF 업로드 처리 (테스트 모드일 때는 가짜 이미지 적용)
                 if is_test_mode:
                     data['image_url'] = "https://via.placeholder.com/220x150?text=Test+Image"
                     data['smk_url'] = "#"
