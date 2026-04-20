@@ -16,7 +16,6 @@ API_KEY = st.secrets["GEMINI_API_KEY"]
 GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
 
-# 모델 설정 (Gemini 2.5 Flash)
 MODEL_ID = "gemini-2.5-flash-lite" 
 client = genai.Client(api_key=API_KEY)
 
@@ -31,31 +30,21 @@ PR_URL = "https://link.inpock.co.kr/pnutlo?utm_source=ig&utm_medium=social&utm_c
 # ==========================================
 
 def get_week_of_month(dt):
-    """현재 날짜의 주차 계산"""
     first_day = dt.replace(day=1)
     adjusted_dom = dt.day + first_day.weekday()
     return int(math.ceil(adjusted_dom / 7.0))
 
 def upload_file_to_github(file_obj, patent_id, folder_name):
-    """파일(이미지/PDF)을 GitHub 폴더에 업로드하고 용도에 맞는 URL 반환"""
     file_content = file_obj.getvalue()
-    
     ext = file_obj.name.split('.')[-1].lower() if hasattr(file_obj, 'name') else 'png'
     file_name = f"{folder_name}/{patent_id}.{ext}"
     url = f"https://api.github.com/repos/{GH_REPO}/contents/{file_name}"
     
-    headers = {
-        "Authorization": f"token {GH_TOKEN}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
+    headers = {"Authorization": f"token {GH_TOKEN}", "Accept": "application/vnd.github.v3+json"}
     res = requests.get(url, headers=headers)
     sha = res.json().get('sha') if res.status_code == 200 else None
     
-    payload = {
-        "message": f"Update {folder_name}: {patent_id}",
-        "content": base64.b64encode(file_content).decode("utf-8")
-    }
+    payload = {"message": f"Update {folder_name}: {patent_id}", "content": base64.b64encode(file_content).decode("utf-8")}
     if sha: payload["sha"] = sha
     
     put_res = requests.put(url, headers=headers, json=payload)
@@ -69,8 +58,19 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
             
     return "https://via.placeholder.com/220?text=Upload+Error"
 
-def analyze_pdf_document(file_obj):
-    """PDF 분석 및 요약 정보 추출 (SMK 문서 내 공식 기술분류 추출 포함)"""
+def analyze_pdf_document(file_obj, test_mode=False):
+    """PDF 분석 (테스트 모드 켜면 API 호출 없이 즉시 가짜 데이터 반환)"""
+    if test_mode:
+        return {
+            "title": "[테스트] 초고강도 하이브리드 금속-플라스틱 결합 신소재 기술 개발",
+            "summary": [
+                "API를 호출하지 않는 테스트 모드입니다! 내용이 아무리 길어져도 좌측과 우측 카드의 큰 틀(테두리) 높이가 무조건 똑같이 맞춰지는지 확인하기 위해 일부러 아주 긴 문장을 작성해 보았습니다.",
+                "테두리를 바깥쪽 칸(TD)에 직접 부여하는 방식으로 구조를 변경하여, 내용물 높이가 달라도 레이아웃이 깨지지 않습니다.",
+                "디자인과 글씨 크기, 버튼 위치가 마음에 드실 때까지 이 테스트 모드로 무제한(0원) 생성해보세요!"
+            ],
+            "category": "테스트분야"
+        }
+
     temp_path = f"temp_{int(time.time())}.pdf"
     try:
         with open(temp_path, "wb") as f:
@@ -80,38 +80,29 @@ def analyze_pdf_document(file_obj):
         
         prompt = """
         특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요.
-        항목:
         - title: 기술 명칭
         - summary: 주요 특징을 3개 문장 리스트로 요약
-        - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료', '바이오' 등. 문서에 적힌 그대로 추출하되 공백이나 줄바꿈은 제거하여 단일 단어로 만들 것)
+        - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료' 등. 공백/줄바꿈 제거 단일 단어)
         """
         response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
-        
-        raw_text = response.text.strip()
-        if "```json" in raw_text:
-            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_text:
-            raw_text = raw_text.split("```")[1].split("```")[0].strip()
-            
+        raw_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(raw_text)
     except Exception as e:
-        return {"title": "분석 지연", "summary": [f"상세 내용은 SMK를 확인해주세요.", f"사유: {str(e)[:30]}"], "category": "기타"}
+        return {"title": "분석 지연", "summary": [f"사유: {str(e)[:30]}"], "category": "기타"}
     finally:
         if os.path.exists(temp_path): os.remove(temp_path)
 
 def group_patents_by_category(patent_list):
-    """카테고리를 바탕으로 동적 그룹화"""
     grouped = {}
     for patent in patent_list:
         raw_cat = patent.get("category", "기타")
         cat = raw_cat.replace(" ", "").replace("\n", "") if raw_cat else "기타"
-        if cat not in grouped:
-            grouped[cat] = []
+        if cat not in grouped: grouped[cat] = []
         grouped[cat].append(patent)
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (글씨 크기 확대, 볼드 처리, 틀 높이 고정)
+# 3. 뉴스레터 HTML 템플릿 (좌우 높이 완벽 동기화)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -144,13 +135,14 @@ html_template_str = """
   
   {% for category, patents in grouped_patents.items() %}
   <tr><td style="padding:10px 0 5px 0;"><table width="100%"><tr><td style="background-color:#005BAC; padding:10px 18px; border-radius:6px; color:#ffffff; font-size:17px; font-weight:bold;">▍ {{ category }} 분야</td></tr></table></td></tr>
-  <tr><td><table width="100%">
+  
+  <tr><td style="padding-top:10px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
     {% for patent in patents %}
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
     
-    <td width="50%" valign="top" style="padding:10px; height:100%;">
-      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd; border-radius:10px; height:100%; min-height:550px;">
-        
+    <td width="48%" valign="top" style="border:1px solid #ddd; border-radius:10px; background-color:#ffffff;">
+      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="min-height:550px;">
         <tr>
           <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:85px;">
             <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
@@ -158,13 +150,11 @@ html_template_str = """
             </p>
           </td>
         </tr>
-        
         <tr>
           <td align="center" valign="top" style="padding:0 15px 15px 15px;">
             <img src="{{ patent.image_url }}" width="220" style="border-radius:10px; border:1px solid #eee; object-fit:cover;">
           </td>
         </tr>
-        
         <tr>
           <td valign="top" style="padding:0 15px; height:100%;">
             <div style="font-size:15px; line-height:1.7; color:#333; word-break:keep-all;">
@@ -174,7 +164,6 @@ html_template_str = """
             </div>
           </td>
         </tr>
-        
         <tr>
           <td valign="bottom" style="padding:15px;">
             <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
@@ -182,17 +171,25 @@ html_template_str = """
             </div>
           </td>
         </tr>
-        
       </table>
     </td>
     
-    {% if loop.index0 % 2 == 1 or loop.last %}</tr>{% endif %}
+    {% if loop.index0 % 2 == 0 %}
+      {% if loop.last %}
+        <td width="4%"></td><td width="48%"></td> {% else %}
+        <td width="4%"></td> {% endif %}
+    {% endif %}
+    
+    {% if loop.index0 % 2 == 1 or loop.last %}
+    </tr>
+    <tr><td colspan="3" height="20"></td></tr> {% endif %}
     {% endfor %}
-  </table></td></tr>
+    </table>
+  </td></tr>
   {% endfor %}
   
   <tr>
-    <td align="center" style="padding:40px 10px 20px 10px;">
+    <td align="center" style="padding:30px 10px 20px 10px;">
       <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
       <a href="{{ pr_url }}" style="display:block; width:100%; max-width:400px; background-color:#555555; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📺 PNUTH 홍보 채널 바로가기</a>
     </td>
@@ -212,6 +209,9 @@ def main():
     st.title("🚀 PNUTH 뉴스레터 자동 생성기")
     st.info("PDF와 이미지 파일을 함께 업로드하세요. (파일명 번호 일치 필수)")
 
+    # 추가된 기능: API 한도 소모 없이 무제한 디자인 테스트 가능!
+    is_test_mode = st.checkbox("🧪 테스트 모드 켜기 (체크 시 API 요금이 나가지 않으며 초고속으로 레이아웃만 확인합니다.)")
+
     col1, col2 = st.columns(2)
     with col1:
         pdf_files = st.file_uploader("1. SMK PDF들", type="pdf", accept_multiple_files=True)
@@ -229,22 +229,29 @@ def main():
                 patent_id = uploaded_file.name.split('_')[0]
                 status_text.text(f"⏳ {patent_id} 처리 중... ({idx+1}/{len(pdf_files)})")
                 
-                time.sleep(2)
+                # 테스트 모드가 아닐 때만 2초 쉬기
+                if not is_test_mode:
+                    time.sleep(2)
                 
-                data = analyze_pdf_document(uploaded_file)
+                # 테스트 모드 여부를 함수에 전달
+                data = analyze_pdf_document(uploaded_file, test_mode=is_test_mode)
                 data['patent_id'] = patent_id
                 
-                if patent_id in image_map:
-                    data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
+                # 이미지/PDF 업로드 처리 (테스트 모드일 때는 가짜 이미지 적용)
+                if is_test_mode:
+                    data['image_url'] = "https://via.placeholder.com/220x150?text=Test+Image"
+                    data['smk_url'] = "#"
                 else:
-                    data['image_url'] = "https://via.placeholder.com/220?text=No+Image"
-                
-                data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
+                    if patent_id in image_map:
+                        data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
+                    else:
+                        data['image_url'] = "https://via.placeholder.com/220?text=No+Image"
+                    data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
                 
                 patent_list.append(data)
                 progress_bar.progress((idx + 1) / len(pdf_files))
 
-            status_text.success("🎉 분석 및 이미지/PDF 서버 저장 완료!")
+            status_text.success("🎉 생성 완료!")
             
             grouped_patents = group_patents_by_category(patent_list)
             now = datetime.datetime.now()
@@ -262,7 +269,6 @@ def main():
 
             st.divider()
             st.download_button("📂 뉴스레터 HTML 다운로드", data=result_html, file_name=f"newsletter_{now.strftime('%Y%m%d')}.html", mime="text/html")
-            st.code(result_html, language="html")
             st.components.v1.html(result_html, height=800, scrolling=True)
 
 if __name__ == "__main__":
