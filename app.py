@@ -64,9 +64,9 @@ def analyze_pdf_document(file_obj, test_mode=False):
         return {
             "title": "[테스트] 초고강도 하이브리드 금속-플라스틱 결합 신소재 기술 개발",
             "summary": [
-                "API를 호출하지 않는 테스트 모드입니다!",
-                "테두리를 바깥쪽 칸(TD)에 직접 부여하는 방식으로 구조를 변경하여, 내용물 높이가 달라도 레이아웃이 깨지지 않습니다.",
-                "디자인과 글씨 크기, 버튼 위치가 마음에 드실 때까지 무제한 생성해보세요!"
+                "버튼이 완벽하게 바닥에 고정되는지 확인하기 위한 테스트 모드입니다.",
+                "사진은 원본 비율을 유지하며 잘림 없이 깔끔하게 들어갑니다.",
+                "내용의 길이가 양쪽이 다르더라도 버튼은 항상 동일한 선상에 맞춰집니다!"
             ],
             "category": "테스트분야"
         }
@@ -102,7 +102,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (이미지 세로 크기 강제 고정 적용)
+# 3. 뉴스레터 HTML 템플릿 (사진 짤림 방지 + 버튼 바닥 고정)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -142,9 +142,10 @@ html_template_str = """
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
     
     <td width="48%" valign="top" style="border:1px solid #ddd; border-radius:10px; background-color:#ffffff;">
-      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="min-height:550px;">
+      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="height:100%;">
+        
         <tr>
-          <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:85px;">
+          <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:1%;">
             <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
               {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
             </p>
@@ -152,8 +153,8 @@ html_template_str = """
         </tr>
         
         <tr>
-          <td align="center" valign="top" style="padding:0 15px 15px 15px;">
-            <img src="{{ patent.image_url }}" width="220" height="150" style="border-radius:10px; border:1px solid #eee; object-fit:cover;">
+          <td align="center" valign="top" style="padding:0 15px 15px 15px; height:1%;">
+            <img src="{{ patent.image_url }}" style="width:100%; max-width:280px; height:160px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff;">
           </td>
         </tr>
         
@@ -166,13 +167,15 @@ html_template_str = """
             </div>
           </td>
         </tr>
+        
         <tr>
-          <td valign="bottom" style="padding:15px;">
+          <td valign="bottom" style="padding:15px; height:1%;">
             <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
               <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
             </div>
           </td>
         </tr>
+        
       </table>
     </td>
     
@@ -207,7 +210,7 @@ html_template_str = """
 """
 
 # ==========================================
-# 4. Streamlit 메인 실행
+# 4. Stream মাতৃ 실행
 # ==========================================
 def main():
     st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
@@ -240,13 +243,13 @@ def main():
                 data['patent_id'] = patent_id
                 
                 if is_test_mode:
-                    data['image_url'] = "https://via.placeholder.com/220x150?text=Test+Image"
+                    data['image_url'] = "https://via.placeholder.com/280x160?text=Test+Image"
                     data['smk_url'] = "#"
                 else:
                     if patent_id in image_map:
                         data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
                     else:
-                        data['image_url'] = "https://via.placeholder.com/220?text=No+Image"
+                        data['image_url'] = "https://via.placeholder.com/280x160?text=No+Image"
                     data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
                 
                 patent_list.append(data)
