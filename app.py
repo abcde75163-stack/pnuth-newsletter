@@ -72,7 +72,7 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj):
-    """PDF 분석 및 요약 정보 추출 (SMK 문서 내 공식 기술분류 추출 포함)"""
+    """PDF 분석 및 요약 정보 추출"""
     temp_path = f"temp_{int(time.time())}.pdf"
     try:
         with open(temp_path, "wb") as f:
@@ -80,7 +80,6 @@ def analyze_pdf_document(file_obj):
         with open(temp_path, "rb") as f:
             uploaded_doc = client.files.upload(file=f, config={'mime_type': 'application/pdf'})
         
-        # [수정됨] AI가 임의로 판단하지 않고, 문서에 적힌 분류(예: 정보통신, 재료 등)를 그대로 가져오도록 프롬프트 강화
         prompt = """
         특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요.
         항목:
@@ -103,20 +102,18 @@ def analyze_pdf_document(file_obj):
         if os.path.exists(temp_path): os.remove(temp_path)
 
 def group_patents_by_category(patent_list):
-    """[수정됨] AI가 추출한 카테고리를 바탕으로 동적 그룹화 (공백/줄바꿈 방어 로직 추가)"""
+    """AI가 추출한 카테고리를 바탕으로 동적 그룹화"""
     grouped = {}
     for patent in patent_list:
-        # AI가 '정보 통신' 또는 '정보\n통신'이라고 추출했을 경우를 대비해 여백 제거
         raw_cat = patent.get("category", "기타")
         cat = raw_cat.replace(" ", "").replace("\n", "") if raw_cat else "기타"
-        
         if cat not in grouped:
             grouped[cat] = []
         grouped[cat].append(patent)
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿
+# 3. 뉴스레터 HTML 템플릿 (디자인 정렬 완벽 적용)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -152,28 +149,44 @@ html_template_str = """
   <tr><td><table width="100%">
     {% for patent in patents %}
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
-    <td width="50%" valign="top" style="
-    padding:15px;
-    border:1px solid #ddd;
-    border-radius:10px;
-    word-break:keep-all;">
-  <p style="margin:0 0 12px 0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4;">
-    {{ patent.title }} ({{ patent.patent_id }})
-  </p>
-  <div style="text-align:center; margin-bottom:12px;">
-    <img src="{{ patent.image_url }}" width="220" style="border-radius:10px; border:1px solid #eee;">
-  </div>
-  <div style="font-size:14px; line-height:1.7; color:#444;">
-    {% for s in patent.summary %}
-    <p style="margin:0 0 6px 0;">• {{ s }}</p>
-    {% endfor %}
-  </div>
-  
-  <div style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px dashed #eee;">
-    <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
-  </div>
-  
-</td>
+    
+    <td width="50%" valign="top" style="padding:10px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd; border-radius:10px; height:100%; min-height:550px;">
+        
+        <tr>
+          <td valign="top" style="padding:20px 15px 10px 15px; height:75px;">
+            <p style="margin:0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4; word-break:keep-all;">
+              {{ patent.title }}<br><span style="font-size:13px; color:#888; font-weight:normal;">({{ patent.patent_id }})</span>
+            </p>
+          </td>
+        </tr>
+        
+        <tr>
+          <td align="center" valign="top" style="padding:0 15px 15px 15px;">
+            <img src="{{ patent.image_url }}" width="220" style="border-radius:10px; border:1px solid #eee; object-fit:cover;">
+          </td>
+        </tr>
+        
+        <tr>
+          <td valign="top" style="padding:0 15px; height:100%;">
+            <div style="font-size:14px; line-height:1.7; color:#444; word-break:keep-all;">
+              {% for s in patent.summary %}
+              <p style="margin:0 0 6px 0;">• {{ s }}</p>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        
+        <tr>
+          <td valign="bottom" style="padding:15px;">
+            <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
+              <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
+            </div>
+          </td>
+        </tr>
+        
+      </table>
+    </td>
     {% if loop.index0 % 2 == 1 or loop.last %}</tr>{% endif %}
     {% endfor %}
   </table></td></tr>
