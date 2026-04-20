@@ -17,7 +17,7 @@ GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
 
 # 모델 설정 (Gemini 2.5 Flash)
-MODEL_ID = "gemini-2.5-flash-lite" 
+MODEL_ID = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
 
 # 고정 리소스 및 배너 URL
@@ -111,7 +111,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (제목 가운데 정렬 및 자간 최적화)
+# 3. 뉴스레터 HTML 템플릿 (글씨 크기 확대, 볼드 처리, 틀 높이 고정)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -148,13 +148,13 @@ html_template_str = """
     {% for patent in patents %}
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
     
-    <td width="50%" valign="top" style="padding:10px;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd; border-radius:10px; height:100%; min-height:550px;">
+    <td width="50%" valign="top" style="padding:10px; height:100%;">
+      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd; border-radius:10px; height:100%; min-height:550px;">
         
         <tr>
-          <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:75px;">
-            <p style="margin:0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
-              {{ patent.title }}<br><span style="font-size:12px; color:#888; font-weight:normal; letter-spacing:0px;">({{ patent.patent_id }})</span>
+          <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:85px;">
+            <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
+              {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
             </p>
           </td>
         </tr>
@@ -167,7 +167,7 @@ html_template_str = """
         
         <tr>
           <td valign="top" style="padding:0 15px; height:100%;">
-            <div style="font-size:14px; line-height:1.7; color:#444; word-break:keep-all;">
+            <div style="font-size:15px; line-height:1.7; color:#333; word-break:keep-all;">
               {% for s in patent.summary %}
               <p style="margin:0 0 6px 0;">• {{ s }}</p>
               {% endfor %}
@@ -178,7 +178,7 @@ html_template_str = """
         <tr>
           <td valign="bottom" style="padding:15px;">
             <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
-              <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
+              <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
             </div>
           </td>
         </tr>
