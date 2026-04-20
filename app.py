@@ -62,8 +62,6 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     
     if put_res.status_code in [200, 201]:
         user_id, repo_name = GH_REPO.split('/')
-        
-        # PDF는 웹사이트 뷰어(Pages) 주소, 이미지는 원본(raw) 주소
         if folder_name == "pdfs":
             return f"https://{user_id}.github.io/{repo_name}/{file_name}"
         else:
@@ -72,7 +70,7 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj):
-    """PDF 분석 및 요약 정보 추출"""
+    """PDF 분석 및 요약 정보 추출 (SMK 문서 내 공식 기술분류 추출 포함)"""
     temp_path = f"temp_{int(time.time())}.pdf"
     try:
         with open(temp_path, "wb") as f:
@@ -102,7 +100,7 @@ def analyze_pdf_document(file_obj):
         if os.path.exists(temp_path): os.remove(temp_path)
 
 def group_patents_by_category(patent_list):
-    """AI가 추출한 카테고리를 바탕으로 동적 그룹화"""
+    """카테고리를 바탕으로 동적 그룹화"""
     grouped = {}
     for patent in patent_list:
         raw_cat = patent.get("category", "기타")
@@ -113,7 +111,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (디자인 정렬 완벽 적용)
+# 3. 뉴스레터 HTML 템플릿 (제목 가운데 정렬 및 자간 최적화)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -154,9 +152,9 @@ html_template_str = """
       <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ddd; border-radius:10px; height:100%; min-height:550px;">
         
         <tr>
-          <td valign="top" style="padding:20px 15px 10px 15px; height:75px;">
-            <p style="margin:0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4; word-break:keep-all;">
-              {{ patent.title }}<br><span style="font-size:13px; color:#888; font-weight:normal;">({{ patent.patent_id }})</span>
+          <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:75px;">
+            <p style="margin:0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
+              {{ patent.title }}<br><span style="font-size:12px; color:#888; font-weight:normal; letter-spacing:0px;">({{ patent.patent_id }})</span>
             </p>
           </td>
         </tr>
@@ -187,6 +185,7 @@ html_template_str = """
         
       </table>
     </td>
+    
     {% if loop.index0 % 2 == 1 or loop.last %}</tr>{% endif %}
     {% endfor %}
   </table></td></tr>
@@ -230,20 +229,16 @@ def main():
                 patent_id = uploaded_file.name.split('_')[0]
                 status_text.text(f"⏳ {patent_id} 처리 중... ({idx+1}/{len(pdf_files)})")
                 
-                # 429 에러 방지를 위한 2초 지연
                 time.sleep(2)
                 
-                # AI 분석 및 데이터 매칭
                 data = analyze_pdf_document(uploaded_file)
                 data['patent_id'] = patent_id
                 
-                # 1. GitHub 서버 이미지 업로드 (images 폴더 -> raw 주소 반환)
                 if patent_id in image_map:
                     data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
                 else:
                     data['image_url'] = "https://via.placeholder.com/220?text=No+Image"
                 
-                # 2. GitHub 서버 PDF 업로드 (pdfs 폴더 -> 뷰어(blob) 주소 반환)
                 data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
                 
                 patent_list.append(data)
@@ -251,7 +246,6 @@ def main():
 
             status_text.success("🎉 분석 및 이미지/PDF 서버 저장 완료!")
             
-            # 최종 HTML 렌더링
             grouped_patents = group_patents_by_category(patent_list)
             now = datetime.datetime.now()
             week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}째주"
