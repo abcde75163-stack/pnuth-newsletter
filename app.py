@@ -17,7 +17,7 @@ GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
 
 # 모델 설정 (Gemini 2.5 Flash)
-MODEL_ID = "gemini-2.5-flash-lite" 
+MODEL_ID = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
 
 # 고정 리소스 및 배너 URL
@@ -25,8 +25,6 @@ LOGO_URL = "https://lh3.googleusercontent.com/d/1WjzjlOOetztrcgq6rioAZxTzi_K-JwL
 BLDG_URL = "https://lh3.googleusercontent.com/d/1f7XwQ2Z-43sECHQ53Of0J8NzqOeRh9Ll"
 CONSULT_URL = "https://clever-designers-959477.framer.app/pium-%EA%B8%B0%EC%88%A0%EC%82%AC%EC%97%85%ED%99%94-%EC%84%BC%ED%84%B0-%EC%88%98%EC%9A%94%EA%B8%B0%EC%88%A0-%EC%A0%91%EC%88%98-%ED%8E%98%EC%9D%B4%EC%A7%80"
 PR_URL = "https://link.inpock.co.kr/pnutlo?utm_source=ig&utm_medium=social&utm_content=link_in_bio"
-
-TECH_CATEGORIES = ["바이오", "의료기기", "기계", "재료", "전기전자", "정보통신", "에너지자원", "원자력", "건설교통"]
 
 # ==========================================
 # 2. 핵심 유틸리티 함수
@@ -39,10 +37,9 @@ def get_week_of_month(dt):
     return int(math.ceil(adjusted_dom / 7.0))
 
 def upload_file_to_github(file_obj, patent_id, folder_name):
-    """파일(이미지 또는 PDF)을 GitHub 폴더에 업로드하고 용도에 맞는 외부 접근 URL 반환"""
+    """파일(이미지/PDF)을 GitHub 폴더에 업로드하고 용도에 맞는 URL 반환"""
     file_content = file_obj.getvalue()
     
-    # 파일 확장자 추출 (pdf 또는 png/jpg)
     ext = file_obj.name.split('.')[-1].lower() if hasattr(file_obj, 'name') else 'png'
     file_name = f"{folder_name}/{patent_id}.{ext}"
     url = f"https://api.github.com/repos/{GH_REPO}/contents/{file_name}"
@@ -66,18 +63,16 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     if put_res.status_code in [200, 201]:
         user_id, repo_name = GH_REPO.split('/')
         
-        # [핵심 로직] PDF는 GitHub Pages 웹사이트 주소로 연결!
+        # PDF는 웹사이트 뷰어(Pages) 주소, 이미지는 원본(raw) 주소
         if folder_name == "pdfs":
-            # GitHub UI 없이 깔끔하게 PDF 뷰어만 띄우는 주소
             return f"https://{user_id}.github.io/{repo_name}/{file_name}"
         else:
-            # 이미지는 기존처럼 메일 화면용 원본(raw) 주소
             return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
             
     return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj):
-    """PDF 분석 및 요약 정보 추출 (Gemini 사용)"""
+    """PDF 분석 및 요약 정보 추출 (SMK 문서 내 공식 기술분류 추출 포함)"""
     temp_path = f"temp_{int(time.time())}.pdf"
     try:
         with open(temp_path, "wb") as f:
@@ -85,7 +80,14 @@ def analyze_pdf_document(file_obj):
         with open(temp_path, "rb") as f:
             uploaded_doc = client.files.upload(file=f, config={'mime_type': 'application/pdf'})
         
-        prompt = f"특허 PDF를 분석하여 JSON 형식으로만 응답하세요. 항목: title, summary(3개 문장 리스트), category({TECH_CATEGORIES} 중 택1)"
+        # [수정됨] AI가 임의로 판단하지 않고, 문서에 적힌 분류(예: 정보통신, 재료 등)를 그대로 가져오도록 프롬프트 강화
+        prompt = """
+        특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요.
+        항목:
+        - title: 기술 명칭
+        - summary: 주요 특징을 3개 문장 리스트로 요약
+        - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료', '바이오' 등. 문서에 적힌 그대로 추출하되 공백이나 줄바꿈은 제거하여 단일 단어로 만들 것)
+        """
         response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
         
         raw_text = response.text.strip()
@@ -101,11 +103,16 @@ def analyze_pdf_document(file_obj):
         if os.path.exists(temp_path): os.remove(temp_path)
 
 def group_patents_by_category(patent_list):
-    """카테고리별 특허 그룹화"""
+    """[수정됨] AI가 추출한 카테고리를 바탕으로 동적 그룹화 (공백/줄바꿈 방어 로직 추가)"""
     grouped = {}
-    for cat in TECH_CATEGORIES + ["기타"]:
-        match = [p for p in patent_list if p.get("category") == cat]
-        if match: grouped[cat] = match
+    for patent in patent_list:
+        # AI가 '정보 통신' 또는 '정보\n통신'이라고 추출했을 경우를 대비해 여백 제거
+        raw_cat = patent.get("category", "기타")
+        cat = raw_cat.replace(" ", "").replace("\n", "") if raw_cat else "기타"
+        
+        if cat not in grouped:
+            grouped[cat] = []
+        grouped[cat].append(patent)
     return grouped
 
 # ==========================================
@@ -139,6 +146,7 @@ html_template_str = """
       <p style="margin:0; font-size:15px; color:#333; font-weight:bold;">{{ week_date }} 기준 우수 특허</p>
     </td>
   </tr>
+  
   {% for category, patents in grouped_patents.items() %}
   <tr><td style="padding:10px 0 5px 0;"><table width="100%"><tr><td style="background-color:#005BAC; padding:10px 18px; border-radius:6px; color:#ffffff; font-size:17px; font-weight:bold;">▍ {{ category }} 분야</td></tr></table></td></tr>
   <tr><td><table width="100%">
@@ -162,7 +170,7 @@ html_template_str = """
   </div>
   
   <div style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px dashed #eee;">
-    <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
+    <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
   </div>
   
 </td>
@@ -170,6 +178,7 @@ html_template_str = """
     {% endfor %}
   </table></td></tr>
   {% endfor %}
+  
   <tr>
     <td align="center" style="padding:40px 10px 20px 10px;">
       <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
