@@ -16,7 +16,7 @@ API_KEY = st.secrets["GEMINI_API_KEY"]
 GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
 
-MODEL_ID = "gemini-2.5-flash-lite" 
+MODEL_ID = "gemini-2.5-flash" 
 client = genai.Client(api_key=API_KEY)
 
 # 고정 리소스 및 배너 URL
@@ -102,7 +102,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (사진 짤림 방지 + 버튼 바닥 고정)
+# 3. 뉴스레터 HTML 템플릿 (각 구역 높이 철벽 고정!)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -141,11 +141,11 @@ html_template_str = """
     {% for patent in patents %}
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
     
-    <td width="48%" valign="top" style="border:1px solid #ddd; border-radius:10px; background-color:#ffffff;">
-      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="height:100%;">
+    <td width="48%" valign="top" height="100%" style="border:1px solid #ddd; border-radius:10px; background-color:#ffffff; height:100%;">
+      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="height:100%; min-height:550px;">
         
         <tr>
-          <td align="center" valign="top" style="padding:20px 15px 10px 15px; height:1%;">
+          <td align="center" valign="top" height="100" style="padding:20px 15px 10px 15px; height:100px; min-height:100px;">
             <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
               {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
             </p>
@@ -153,8 +153,8 @@ html_template_str = """
         </tr>
         
         <tr>
-          <td align="center" valign="top" style="padding:0 15px 15px 15px; height:1%;">
-            <img src="{{ patent.image_url }}" style="width:100%; max-width:280px; height:160px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff;">
+          <td align="center" valign="top" height="170" style="padding:0 15px 15px 15px; height:170px;">
+            <img src="{{ patent.image_url }}" width="220" height="150" style="width:100%; max-width:280px; height:150px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff; display:block;">
           </td>
         </tr>
         
@@ -169,7 +169,7 @@ html_template_str = """
         </tr>
         
         <tr>
-          <td valign="bottom" style="padding:15px; height:1%;">
+          <td valign="bottom" height="70" style="padding:15px; height:70px;">
             <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
               <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
             </div>
@@ -210,7 +210,7 @@ html_template_str = """
 """
 
 # ==========================================
-# 4. Stream মাতৃ 실행
+# 4. Streamlit 메인 실행
 # ==========================================
 def main():
     st.set_page_config(page_title="PNUTH 뉴스레터 생성기", page_icon="🚀")
@@ -243,13 +243,13 @@ def main():
                 data['patent_id'] = patent_id
                 
                 if is_test_mode:
-                    data['image_url'] = "https://via.placeholder.com/280x160?text=Test+Image"
+                    data['image_url'] = "https://via.placeholder.com/280x150?text=Test+Image"
                     data['smk_url'] = "#"
                 else:
                     if patent_id in image_map:
                         data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
                     else:
-                        data['image_url'] = "https://via.placeholder.com/280x160?text=No+Image"
+                        data['image_url'] = "https://via.placeholder.com/280x150?text=No+Image"
                     data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
                 
                 patent_list.append(data)
