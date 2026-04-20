@@ -41,7 +41,7 @@ def get_week_of_month(dt):
     return int(math.ceil(adjusted_dom / 7.0))
 
 def upload_file_to_github(file_obj, patent_id, folder_name):
-    """파일(이미지 또는 PDF)을 GitHub 폴더에 업로드하고 외부 접근 URL 반환"""
+    """파일(이미지 또는 PDF)을 GitHub 폴더에 업로드하고 용도에 맞는 외부 접근 URL 반환"""
     file_content = file_obj.getvalue()
     
     # 파일 확장자 추출 (pdf 또는 png/jpg)
@@ -64,9 +64,18 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     if sha: payload["sha"] = sha
     
     put_res = requests.put(url, headers=headers, json=payload)
+    
     if put_res.status_code in [200, 201]:
         user_id, repo_name = GH_REPO.split('/')
-        return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
+        
+        # [수정된 핵심 로직] 폴더명(파일 종류)에 따라 다른 URL 방식 적용
+        if folder_name == "pdfs":
+            # PDF는 웹 브라우저에서 바로 열람할 수 있도록 GitHub 뷰어(blob) 주소 반환
+            return f"https://github.com/{user_id}/{repo_name}/blob/main/{file_name}"
+        else:
+            # 이미지는 메일 화면에 삽입되어야 하므로 원본(raw) 주소 반환
+            return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
+            
     return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj):
@@ -102,7 +111,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (개별 SMK 버튼 추가)
+# 3. 뉴스레터 HTML 템플릿
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -209,13 +218,13 @@ def main():
                 data = analyze_pdf_document(uploaded_file)
                 data['patent_id'] = patent_id
                 
-                # 1. GitHub 서버 이미지 업로드 (images 폴더)
+                # 1. GitHub 서버 이미지 업로드 (images 폴더 -> raw 주소 반환)
                 if patent_id in image_map:
                     data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
                 else:
                     data['image_url'] = "https://via.placeholder.com/220?text=No+Image"
                 
-                # 2. GitHub 서버 PDF 자동 업로드 (pdfs 폴더)
+                # 2. GitHub 서버 PDF 업로드 (pdfs 폴더 -> 뷰어(blob) 주소 반환)
                 data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
                 
                 patent_list.append(data)
