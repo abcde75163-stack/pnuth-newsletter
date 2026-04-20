@@ -62,11 +62,11 @@ def analyze_pdf_document(file_obj, test_mode=False):
     """PDF 분석 (테스트 모드 지원)"""
     if test_mode:
         return {
-            "title": "[테스트] 초고강도 하이브리드 금속-플라스틱 결합 신소재 기술 개발",
+            "title": "[테스트] 초고강도 하이브리드 금속-플라스틱 결합 신소재",
             "summary": [
                 "버튼이 완벽하게 바닥에 고정되는지 확인하기 위한 테스트 모드입니다.",
                 "사진은 원본 비율을 유지하며 잘림 없이 깔끔하게 들어갑니다.",
-                "내용의 길이가 양쪽이 다르더라도 버튼은 항상 동일한 선상에 맞춰집니다!"
+                "내용의 길이가 양쪽이 다르더라도 Flexbox 기술을 적용하여 버튼은 무조건 항상 바닥에 딱 맞게 정렬됩니다! 테스트를 위해 이 문장을 조금 더 길게 작성해 보겠습니다."
             ],
             "category": "테스트분야"
         }
@@ -102,7 +102,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (각 구역 높이 철벽 고정!)
+# 3. 뉴스레터 HTML 템플릿 (Flexbox 레이아웃 전면 도입!)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -139,44 +139,38 @@ html_template_str = """
   <tr><td style="padding-top:10px;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
     {% for patent in patents %}
+    
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
     
-    <td width="48%" valign="top" height="100%" style="border:1px solid #ddd; border-radius:10px; background-color:#ffffff; height:100%;">
-      <table width="100%" height="100%" cellpadding="0" cellspacing="0" style="height:100%; min-height:550px;">
+    <td width="48%" valign="top" style="border:1px solid #ddd; border-radius:10px; background-color:#ffffff; height:100%;">
+      
+      <div style="display:flex; flex-direction:column; height:100%; min-height:550px; box-sizing:border-box;">
         
-        <tr>
-          <td align="center" valign="top" height="100" style="padding:20px 15px 10px 15px; height:100px; min-height:100px;">
-            <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
-              {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
-            </p>
-          </td>
-        </tr>
+        <div style="padding:20px 15px 10px 15px; height:100px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+          <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
+            {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
+          </p>
+        </div>
         
-        <tr>
-          <td align="center" valign="top" height="170" style="padding:0 15px 15px 15px; height:170px;">
-            <img src="{{ patent.image_url }}" width="220" height="150" style="width:100%; max-width:280px; height:150px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff; display:block;">
-          </td>
-        </tr>
+        <div style="padding:0 15px 15px 15px; height:170px; display:flex; justify-content:center; align-items:center;">
+          <img src="{{ patent.image_url }}" style="width:100%; max-width:280px; height:150px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff; display:block;">
+        </div>
         
-        <tr>
-          <td valign="top" style="padding:0 15px; height:100%;">
-            <div style="font-size:15px; line-height:1.7; color:#333; word-break:keep-all;">
-              {% for s in patent.summary %}
-              <p style="margin:0 0 6px 0;">• {{ s }}</p>
-              {% endfor %}
-            </div>
-          </td>
-        </tr>
+        <div style="padding:0 15px; flex-grow:1;">
+          <div style="font-size:15px; line-height:1.7; color:#333; word-break:keep-all;">
+            {% for s in patent.summary %}
+            <p style="margin:0 0 6px 0;">• {{ s }}</p>
+            {% endfor %}
+          </div>
+        </div>
         
-        <tr>
-          <td valign="bottom" height="70" style="padding:15px; height:70px;">
-            <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
-              <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
-            </div>
-          </td>
-        </tr>
+        <div style="padding:15px; margin-top:auto;">
+          <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
+            <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
+          </div>
+        </div>
         
-      </table>
+      </div>
     </td>
     
     {% if loop.index0 % 2 == 0 %}
@@ -191,6 +185,7 @@ html_template_str = """
     </tr>
     <tr><td colspan="3" height="20"></td></tr>
     {% endif %}
+    
     {% endfor %}
     </table>
   </td></tr>
