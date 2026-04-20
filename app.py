@@ -12,7 +12,6 @@ from jinja2 import Template
 # ==========================================
 # 1. 시스템 설정 (Streamlit Secrets 필수 등록)
 # ==========================================
-# GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO 설정 확인 필요
 API_KEY = st.secrets["GEMINI_API_KEY"]
 GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
@@ -26,7 +25,6 @@ LOGO_URL = "https://lh3.googleusercontent.com/d/1WjzjlOOetztrcgq6rioAZxTzi_K-JwL
 BLDG_URL = "https://lh3.googleusercontent.com/d/1f7XwQ2Z-43sECHQ53Of0J8NzqOeRh9Ll"
 CONSULT_URL = "https://clever-designers-959477.framer.app/pium-%EA%B8%B0%EC%88%A0%EC%82%AC%EC%97%85%ED%99%94-%EC%84%BC%ED%84%B0-%EC%88%98%EC%9A%94%EA%B8%B0%EC%88%A0-%EC%A0%91%EC%88%98-%ED%8E%98%EC%9D%B4%EC%A7%80"
 PR_URL = "https://link.inpock.co.kr/pnutlo?utm_source=ig&utm_medium=social&utm_content=link_in_bio"
-DRIVE_URL = "https://drive.google.com/drive/folders/1bgCruhVa2AE_eH1OEq7lbZykQavFlw6S?hl=ko"
 
 TECH_CATEGORIES = ["바이오", "의료기기", "기계", "재료", "전기전자", "정보통신", "에너지자원", "원자력", "건설교통"]
 
@@ -68,7 +66,7 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     if put_res.status_code in [200, 201]:
         user_id, repo_name = GH_REPO.split('/')
         
-        # [수정된 핵심 로직] PDF는 GitHub Pages 웹사이트 주소로 연결!
+        # [핵심 로직] PDF는 GitHub Pages 웹사이트 주소로 연결!
         if folder_name == "pdfs":
             # GitHub UI 없이 깔끔하게 PDF 뷰어만 띄우는 주소
             return f"https://{user_id}.github.io/{repo_name}/{file_name}"
@@ -242,7 +240,6 @@ def main():
                 grouped_patents=grouped_patents,
                 logo_url=LOGO_URL,
                 bldg_url=BLDG_URL,
-                drive_url=DRIVE_URL,
                 consult_url=CONSULT_URL,
                 pr_url=PR_URL
             )
