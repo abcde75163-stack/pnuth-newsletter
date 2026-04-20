@@ -134,13 +134,23 @@ html_template_str = """
   <tr><td><table width="100%">
     {% for patent in patents %}
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
-    <td width="50%" valign="top" style="padding:10px;">
-      <table width="100%" style="border:1px solid #ddd; border-radius:10px; min-height:420px;">
-        <tr><td style="padding:15px; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4;">{{ patent.title }} ({{ patent.patent_id }})</td></tr>
-        <tr><td align="center"><img src="{{ patent.image_url }}" width="220" style="border-radius:10px; border:1px solid #eee;"></td></tr>
-        <tr><td style="padding:15px; font-size:14px; line-height:1.7; color:#444;">{% for s in patent.summary %}<p style="margin:0 0 6px 0;">• {{ s }}</p>{% endfor %}</td></tr>
-      </table>
-    </td>
+    <td width="50%" valign="top" style="
+    padding:10px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    word-break:keep-all;">
+  <p style="margin:0 0 12px 0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4;">
+    {{ patent.title }} ({{ patent.patent_id }})
+  </p>
+  <div style="text-align:center; margin-bottom:12px;">
+    <img src="{{ patent.image_url }}" width="220" style="border-radius:10px; border:1px solid #eee;">
+  </div>
+  <div style="font-size:14px; line-height:1.7; color:#444;">
+    {% for s in patent.summary %}
+    <p style="margin:0 0 6px 0;">• {{ s }}</p>
+    {% endfor %}
+  </div>
+</td>
     {% if loop.index0 % 2 == 1 or loop.last %}</tr>{% endif %}
     {% endfor %}
   </table></td></tr>
