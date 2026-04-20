@@ -17,7 +17,7 @@ GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
 
 # 모델 설정 (Gemini 2.5 Flash)
-MODEL_ID = "gemini-2.5-flash" 
+MODEL_ID = "gemini-2.5-flash-lite" 
 client = genai.Client(api_key=API_KEY)
 
 # 고정 리소스 및 배너 URL
@@ -70,45 +70,17 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     return "https://via.placeholder.com/220?text=Upload+Error"
 
 def analyze_pdf_document(file_obj):
-    """PDF 분석 및 요약 정보 추출 (SMK 문서 내 공식 기술분류 추출 포함)"""
-    temp_path = f"temp_{int(time.time())}.pdf"
-    try:
-        with open(temp_path, "wb") as f:
-            f.write(file_obj.getbuffer())
-        with open(temp_path, "rb") as f:
-            uploaded_doc = client.files.upload(file=f, config={'mime_type': 'application/pdf'})
-        
-        prompt = """
-        특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요.
-        항목:
-        - title: 기술 명칭
-        - summary: 주요 특징을 3개 문장 리스트로 요약
-        - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료', '바이오' 등. 문서에 적힌 그대로 추출하되 공백이나 줄바꿈은 제거하여 단일 단어로 만들 것)
-        """
-        response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
-        
-        raw_text = response.text.strip()
-        if "```json" in raw_text:
-            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_text:
-            raw_text = raw_text.split("```")[1].split("```")[0].strip()
-            
-        return json.loads(raw_text)
-    except Exception as e:
-        return {"title": "분석 지연", "summary": [f"상세 내용은 SMK를 확인해주세요.", f"사유: {str(e)[:30]}"], "category": "기타"}
-    finally:
-        if os.path.exists(temp_path): os.remove(temp_path)
-
-def group_patents_by_category(patent_list):
-    """카테고리를 바탕으로 동적 그룹화"""
-    grouped = {}
-    for patent in patent_list:
-        raw_cat = patent.get("category", "기타")
-        cat = raw_cat.replace(" ", "").replace("\n", "") if raw_cat else "기타"
-        if cat not in grouped:
-            grouped[cat] = []
-        grouped[cat].append(patent)
-    return grouped
+    """[테스트 모드] API 호출 없이 더미 데이터를 반환하여 할당량 소모를 방지합니다."""
+    # 테스트용이므로 딜레이 없이 즉시 결과를 반환합니다.
+    return {
+        "title": "테스트용 임시 기술명 (API 미호출)",
+        "summary": [
+            "이것은 API를 호출하지 않고 출력하는 테스트 문장 1입니다.",
+            "글씨 크기, 좌우 대칭, 그리고 버튼 위치가 완벽한지 확인해 보세요.",
+            "API 한도를 전혀 소모하지 않으므로 무제한으로 테스트 가능합니다!"
+        ],
+        "category": "정보통신" # '재료', '바이오' 등으로 바꿔가며 테스트해 보세요.
+    }
 
 # ==========================================
 # 3. 뉴스레터 HTML 템플릿 (글씨 크기 확대, 볼드 처리, 틀 높이 고정)
