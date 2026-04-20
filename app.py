@@ -68,12 +68,12 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
     if put_res.status_code in [200, 201]:
         user_id, repo_name = GH_REPO.split('/')
         
-        # [수정된 핵심 로직] 폴더명(파일 종류)에 따라 다른 URL 방식 적용
+        # [수정된 핵심 로직] PDF는 GitHub Pages 웹사이트 주소로 연결!
         if folder_name == "pdfs":
-            # PDF는 웹 브라우저에서 바로 열람할 수 있도록 GitHub 뷰어(blob) 주소 반환
-            return f"https://github.com/{user_id}/{repo_name}/blob/main/{file_name}"
+            # GitHub UI 없이 깔끔하게 PDF 뷰어만 띄우는 주소
+            return f"https://{user_id}.github.io/{repo_name}/{file_name}"
         else:
-            # 이미지는 메일 화면에 삽입되어야 하므로 원본(raw) 주소 반환
+            # 이미지는 기존처럼 메일 화면용 원본(raw) 주소
             return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
             
     return "https://via.placeholder.com/220?text=Upload+Error"
