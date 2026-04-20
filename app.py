@@ -40,10 +40,13 @@ def get_week_of_month(dt):
     adjusted_dom = dt.day + first_day.weekday()
     return int(math.ceil(adjusted_dom / 7.0))
 
-def upload_to_github(file_obj, patent_id):
-    """이미지를 GitHub 저장소의 images/ 폴더에 업로드하고 외부 접근 URL 반환"""
+def upload_file_to_github(file_obj, patent_id, folder_name):
+    """파일(이미지 또는 PDF)을 GitHub 폴더에 업로드하고 외부 접근 URL 반환"""
     file_content = file_obj.getvalue()
-    file_name = f"images/{patent_id}.png"
+    
+    # 파일 확장자 추출 (pdf 또는 png/jpg)
+    ext = file_obj.name.split('.')[-1].lower() if hasattr(file_obj, 'name') else 'png'
+    file_name = f"{folder_name}/{patent_id}.{ext}"
     url = f"https://api.github.com/repos/{GH_REPO}/contents/{file_name}"
     
     headers = {
@@ -55,7 +58,7 @@ def upload_to_github(file_obj, patent_id):
     sha = res.json().get('sha') if res.status_code == 200 else None
     
     payload = {
-        "message": f"Update image: {patent_id}",
+        "message": f"Update {folder_name}: {patent_id}",
         "content": base64.b64encode(file_content).decode("utf-8")
     }
     if sha: payload["sha"] = sha
@@ -99,7 +102,7 @@ def group_patents_by_category(patent_list):
     return grouped
 
 # ==========================================
-# 3. 뉴스레터 HTML 템플릿 (배너 복구 버전)
+# 3. 뉴스레터 HTML 템플릿 (개별 SMK 버튼 추가)
 # ==========================================
 html_template_str = """
 <!DOCTYPE html>
@@ -135,7 +138,7 @@ html_template_str = """
     {% for patent in patents %}
     {% if loop.index0 % 2 == 0 %}<tr>{% endif %}
     <td width="50%" valign="top" style="
-    padding:10px;
+    padding:15px;
     border:1px solid #ddd;
     border-radius:10px;
     word-break:keep-all;">
@@ -150,6 +153,11 @@ html_template_str = """
     <p style="margin:0 0 6px 0;">• {{ s }}</p>
     {% endfor %}
   </div>
+  
+  <div style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px dashed #eee;">
+    <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 개별 기술요약서(SMK) 보기</a>
+  </div>
+  
 </td>
     {% if loop.index0 % 2 == 1 or loop.last %}</tr>{% endif %}
     {% endfor %}
@@ -157,7 +165,7 @@ html_template_str = """
   {% endfor %}
   <tr>
     <td align="center" style="padding:40px 10px 20px 10px;">
-      <a href="{{ drive_url }}" style="display:block; width:100%; max-width:400px; background-color:#005BAC; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📄 기술요약서(SMK) 전체보기</a>
+      <a href="{{ drive_url }}" style="display:block; width:100%; max-width:400px; background-color:#005BAC; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📂 기술요약서(SMK) 전체 폴더 열기</a>
       <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
       <a href="{{ pr_url }}" style="display:block; width:100%; max-width:400px; background-color:#555555; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📺 PNUTH 홍보 채널 바로가기</a>
     </td>
@@ -201,16 +209,19 @@ def main():
                 data = analyze_pdf_document(uploaded_file)
                 data['patent_id'] = patent_id
                 
-                # GitHub 서버 이미지 업로드
+                # 1. GitHub 서버 이미지 업로드 (images 폴더)
                 if patent_id in image_map:
-                    data['image_url'] = upload_to_github(image_map[patent_id], patent_id)
+                    data['image_url'] = upload_file_to_github(image_map[patent_id], patent_id, "images")
                 else:
                     data['image_url'] = "https://via.placeholder.com/220?text=No+Image"
+                
+                # 2. GitHub 서버 PDF 자동 업로드 (pdfs 폴더)
+                data['smk_url'] = upload_file_to_github(uploaded_file, patent_id, "pdfs")
                 
                 patent_list.append(data)
                 progress_bar.progress((idx + 1) / len(pdf_files))
 
-            status_text.success("🎉 분석 및 이미지 서버 저장 완료!")
+            status_text.success("🎉 분석 및 이미지/PDF 서버 저장 완료!")
             
             # 최종 HTML 렌더링
             grouped_patents = group_patents_by_category(patent_list)
