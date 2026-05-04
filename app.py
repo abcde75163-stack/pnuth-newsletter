@@ -109,6 +109,14 @@ html_template_str = """
 <html lang="ko">
 <head><meta charset="UTF-8"></head>
 <body style="margin:0; padding:0; background-color:#f5f7fa;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#e8f0fa;">
+  <tr>
+    <td align="center" style="padding:10px 20px; font-size:12px; color:#444; font-family:'Malgun Gothic', sans-serif;">
+      본 메일은 부산대학교 산학협력단의 <strong>기술이전 또는 가족기업 대상</strong>으로 송부드리는 메일입니다. &nbsp;|&nbsp;
+      수신을 원치 않으시면 <a href="mailto:cjs7024@pusan.ac.kr" style="color:#005BAC;">수신거부</a>를 클릭해 주세요.
+    </td>
+  </tr>
+</table>
 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fa;">
 <tr><td align="center">
 <table width="850" cellpadding="0" cellspacing="0" style="background-color:#ffffff; padding:20px; font-family:'Malgun Gothic', sans-serif;">
