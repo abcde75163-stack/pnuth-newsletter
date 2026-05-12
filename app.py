@@ -219,7 +219,8 @@ def main():
             progress_bar = st.progress(0)
             
             for idx, uploaded_file in enumerate(pdf_files):
-                patent_id = uploaded_file.name.split('_')[0]
+                base_name = uploaded_file.name.split('_')[0]
+                patent_id = os.path.splitext(base_name)[0]
                 status_text.text(f"⏳ {patent_id} 처리 중... ({idx+1}/{len(pdf_files)})")
                 
                 if not is_test_mode:
