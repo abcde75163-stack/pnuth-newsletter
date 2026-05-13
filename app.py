@@ -148,35 +148,28 @@ html_template_str = """
     
     <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
     
-    {# 왼쪽: 이미지 영역 #}
     <div style="width: 180px; min-width: 180px; display: flex; justify-content: center; align-items: center; padding: 8px; border-right: 1px solid #eee; background-color: #fafafa;">
       <img src="{{ patent.image_url }}" style="width:164px; height:164px; object-fit:contain; border-radius:6px; border:1px solid #eee; background-color:#fff;">
     </div>
     
-    {# 오른쪽: 내용 영역 #}
     <div style="flex: 1; display: flex; flex-direction: column; padding: 15px 18px;">
       
-      {# 제목: 폰트 축소로 한 줄 표시 최적화 #}
       <p style="margin:0 0 3px 0; font-weight:bold; color:#005BAC; font-size:15px; line-height:1.4; letter-spacing:-0.5px; word-break:keep-all;">
         {{ patent.title }}
       </p>
       
-      {# 특허번호: 바로 다음 줄, 굵은 글씨 #}
       <p style="margin:0 0 8px 0; font-weight:bold; color:#555; font-size:13px; line-height:1.3;">
         ({{ patent.patent_id }})
       </p>
       
-      {# 구분선 #}
       <div style="border-top: 1px solid #eee; margin-bottom: 8px;"></div>
       
-      {# 요약 #}
       <div style="font-size:14px; line-height:1.6; color:#333; word-break:keep-all; flex-grow: 1;">
         {% for s in patent.summary %}
         <p style="margin:0 0 4px 0;">• {{ s }}</p>
         {% endfor %}
       </div>
       
-      {# SMK 버튼 #}
       <div style="margin-top: 10px;">
         <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:6px 14px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
       </div>
@@ -252,7 +245,7 @@ def main():
             
             grouped_patents = group_patents_by_category(patent_list)
             now = datetime.datetime.now()
-            week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}째주"
+            week_str = f"{now.year}년 {now.month}월 {get_week_of_month(now)}주차"
             
             template = Template(html_template_str)
             result_html = template.render(
