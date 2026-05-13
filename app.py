@@ -140,47 +140,47 @@ html_template_str = """
       <p style="margin:0; font-size:15px; color:#333; font-weight:bold;">{{ week_date }} 기준 우수 특허</p>
     </td>
   </tr>
-  
+
   {% for category, patents in grouped_patents.items() %}
-  <tr><td style="padding:10px 0 5px 0;"><table width="100%"><tr><td style="background-color:#005BAC; padding:10px 18px; border-radius:6px; color:#ffffff; font-size:17px; font-weight:bold;">▍ {{ category }} 분야</td></tr></table></td></tr>
-  
+  <tr><td style="padding:10px 0 5px 0;">
+    <table width="100%"><tr><td style="background-color:#005BAC; padding:10px 18px; border-radius:6px; color:#ffffff; font-size:17px; font-weight:bold;">▍ {{ category }} 분야</td></tr></table>
+  </td></tr>
+
   <tr><td style="padding-top:10px;">
-    
-    <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
-    
-    <div style="width: 180px; min-width: 180px; display: flex; justify-content: center; align-items: center; padding: 8px; border-right: 1px solid #eee; background-color: #fafafa;">
-      <img src="{{ patent.image_url }}" style="width:164px; height:164px; object-fit:contain; border-radius:6px; border:1px solid #eee; background-color:#fff;">
-    </div>
-    
-    <div style="flex: 1; display: flex; flex-direction: column; padding: 15px 18px;">
-      
-      <p style="margin:0 0 3px 0; font-weight:bold; color:#005BAC; font-size:15px; line-height:1.4; letter-spacing:-0.5px; word-break:keep-all;">
-        {{ patent.title }}
-      </p>
-      
-      <p style="margin:0 0 8px 0; font-weight:bold; color:#555; font-size:13px; line-height:1.3;">
-        ({{ patent.patent_id }})
-      </p>
-      
-      <div style="border-top: 1px solid #eee; margin-bottom: 8px;"></div>
-      
-      <div style="font-size:14px; line-height:1.6; color:#333; word-break:keep-all; flex-grow: 1;">
-        {% for s in patent.summary %}
-        <p style="margin:0 0 4px 0;">• {{ s }}</p>
-        {% endfor %}
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+
+      {% for patent in patents %}
+      <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
+
+        <div style="width: 180px; min-width: 180px; display: flex; justify-content: center; align-items: center; padding: 8px; border-right: 1px solid #eee; background-color: #fafafa;">
+          <img src="{{ patent.image_url }}" style="width:164px; height:164px; object-fit:contain; border-radius:6px; border:1px solid #eee; background-color:#fff;">
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; padding: 15px 18px;">
+          <p style="margin:0 0 3px 0; font-weight:bold; color:#005BAC; font-size:15px; line-height:1.4; letter-spacing:-0.5px; word-break:keep-all;">
+            {{ patent.title }}
+          </p>
+          <p style="margin:0 0 8px 0; font-weight:bold; color:#555; font-size:13px; line-height:1.3;">
+            ({{ patent.patent_id }})
+          </p>
+          <div style="border-top: 1px solid #eee; margin-bottom: 8px;"></div>
+          <div style="font-size:14px; line-height:1.6; color:#333; word-break:keep-all; flex-grow: 1;">
+            {% for s in patent.summary %}
+            <p style="margin:0 0 4px 0;">• {{ s }}</p>
+            {% endfor %}
+          </div>
+          <div style="margin-top: 10px;">
+            <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:6px 14px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
+          </div>
+        </div>
+
       </div>
-      
-      <div style="margin-top: 10px;">
-        <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:6px 14px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
-      </div>
-      
+      {% endfor %}
+
     </div>
-  </div>
+  </td></tr>
   {% endfor %}
-</div>
-    </td></tr>
-  {% endfor %}
-  
+
   <tr>
     <td align="center" style="padding:15px 10px 10px 10px;">
       <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
