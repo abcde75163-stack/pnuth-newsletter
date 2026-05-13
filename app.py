@@ -146,39 +146,43 @@ html_template_str = """
   
   <tr><td style="padding-top:10px;">
     
-    <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+  {% for patent in patents %}
+  <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
+    
+    {# 왼쪽: 이미지 영역 (고정 너비) #}
+    <div style="width: 220px; min-width: 220px; display: flex; justify-content: center; align-items: center; padding: 15px; border-right: 1px solid #eee; background-color: #fafafa;">
+      <img src="{{ patent.image_url }}" style="width:190px; height:130px; object-fit:contain; border-radius:8px; background-color:#fff;">
+    </div>
+    
+    {# 오른쪽: 내용 영역 #}
+    <div style="flex: 1; display: flex; flex-direction: column; padding: 15px 18px;">
       
-      {% for patent in patents %}
-      <div style="width: 48%; margin-bottom: 20px; display: flex; flex-direction: column; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box;">
-        
-        <div style="padding: 12px 15px 8px 15px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-          <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
-            {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
-          </p>
-        </div>
-        
-        <div style="padding: 0 15px 10px 15px; display: flex; justify-content: center; align-items: center;">
-          <img src="{{ patent.image_url }}" style="width:100%; max-width:280px; height:150px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff;">
-        </div>
-        
-        <div style="padding: 0 15px; flex-grow: 1;">
-          <div style="font-size:15px; line-height:1.6; color:#333; word-break:keep-all;">
-            {% for s in patent.summary %}
-            <p style="margin:0 0 4px 0;">• {{ s }}</p>
-            {% endfor %}
-          </div>
-        </div>
-        
-        <div style="padding: 15px; margin-top: auto;">
-          <div style="text-align:center; padding-top:15px; border-top:1px dashed #eee;">
-            <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:14px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
-          </div>
-        </div>
-        
+      {# 제목 #}
+      <p style="margin:0 0 8px 0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4; letter-spacing:-0.5px; word-break:keep-all;">
+        {{ patent.title }}
+        <span style="font-size:13px; color:#777; font-weight:normal; margin-left:6px;">({{ patent.patent_id }})</span>
+      </p>
+      
+      {# 구분선 #}
+      <div style="border-top: 1px solid #eee; margin-bottom: 8px;"></div>
+      
+      {# 요약 #}
+      <div style="font-size:14px; line-height:1.6; color:#333; word-break:keep-all; flex-grow: 1;">
+        {% for s in patent.summary %}
+        <p style="margin:0 0 4px 0;">• {{ s }}</p>
+        {% endfor %}
       </div>
-      {% endfor %}
+      
+      {# SMK 버튼 #}
+      <div style="margin-top: 10px;">
+        <a href="{{ patent.smk_url }}" target="_blank" style="display:inline-block; background-color:#f0f4f8; color:#005BAC; padding:6px 14px; border-radius:5px; text-decoration:none; font-weight:bold; font-size:13px; border:1px solid #005BAC;">📄 기술요약서(SMK) 보기</a>
+      </div>
       
     </div>
+  </div>
+  {% endfor %}
+</div>
     </td></tr>
   {% endfor %}
   
