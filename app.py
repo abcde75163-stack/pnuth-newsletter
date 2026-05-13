@@ -151,20 +151,20 @@ html_template_str = """
       {% for patent in patents %}
       <div style="width: 48%; margin-bottom: 20px; display: flex; flex-direction: column; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box;">
         
-        <div style="padding: 20px 15px 10px 15px; height: 100px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        <div style="padding: 12px 15px 8px 15px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
           <p style="margin:0; font-weight:bold; color:#005BAC; font-size:19px; line-height:1.4; text-align:center; letter-spacing:-0.5px; word-break:keep-all;">
             {{ patent.title }}<br><span style="font-size:15px; color:#555; font-weight:bold; letter-spacing:0px;">({{ patent.patent_id }})</span>
           </p>
         </div>
         
-        <div style="padding: 0 15px 15px 15px; height: 170px; display: flex; justify-content: center; align-items: center;">
+        <div style="padding: 0 15px 10px 15px; display: flex; justify-content: center; align-items: center;">
           <img src="{{ patent.image_url }}" style="width:100%; max-width:280px; height:150px; object-fit:contain; border-radius:10px; border:1px solid #eee; background-color:#fff;">
         </div>
         
         <div style="padding: 0 15px; flex-grow: 1;">
-          <div style="font-size:15px; line-height:1.7; color:#333; word-break:keep-all;">
+          <div style="font-size:15px; line-height:1.6; color:#333; word-break:keep-all;">
             {% for s in patent.summary %}
-            <p style="margin:0 0 6px 0;">• {{ s }}</p>
+            <p style="margin:0 0 4px 0;">• {{ s }}</p>
             {% endfor %}
           </div>
         </div>
@@ -183,7 +183,7 @@ html_template_str = """
   {% endfor %}
   
   <tr>
-    <td align="center" style="padding:30px 10px 20px 10px;">
+    <td align="center" style="padding:15px 10px 10px 10px;">
       <a href="{{ consult_url }}" style="display:block; width:100%; max-width:400px; background-color:#ffffff; color:#005BAC; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; border:2px solid #005BAC; margin-bottom:12px; font-size:16px;">💡 수요기술 상담신청</a>
       <a href="{{ pr_url }}" style="display:block; width:100%; max-width:400px; background-color:#555555; color:#ffffff; text-decoration:none; padding:15px 0; border-radius:8px; font-weight:bold; margin-bottom:12px; font-size:16px;">📺 PNUTH 홍보 채널 바로가기</a>
     </td>
