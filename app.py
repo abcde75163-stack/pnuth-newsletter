@@ -146,22 +146,24 @@ html_template_str = """
   
   <tr><td style="padding-top:10px;">
     
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-  {% for patent in patents %}
-  <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
+    <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
     
-    {# 왼쪽: 이미지 영역 (고정 너비) #}
-    <div style="width: 220px; min-width: 220px; display: flex; justify-content: center; align-items: center; padding: 15px; border-right: 1px solid #eee; background-color: #fafafa;">
-      <img src="{{ patent.image_url }}" style="width:190px; height:130px; object-fit:contain; border-radius:8px; background-color:#fff;">
+    {# 왼쪽: 이미지 영역 #}
+    <div style="width: 180px; min-width: 180px; display: flex; justify-content: center; align-items: center; padding: 8px; border-right: 1px solid #eee; background-color: #fafafa;">
+      <img src="{{ patent.image_url }}" style="width:164px; height:164px; object-fit:contain; border-radius:6px; border:1px solid #eee; background-color:#fff;">
     </div>
     
     {# 오른쪽: 내용 영역 #}
     <div style="flex: 1; display: flex; flex-direction: column; padding: 15px 18px;">
       
-      {# 제목 #}
-      <p style="margin:0 0 8px 0; font-weight:bold; color:#005BAC; font-size:17px; line-height:1.4; letter-spacing:-0.5px; word-break:keep-all;">
+      {# 제목: 폰트 축소로 한 줄 표시 최적화 #}
+      <p style="margin:0 0 3px 0; font-weight:bold; color:#005BAC; font-size:15px; line-height:1.4; letter-spacing:-0.5px; word-break:keep-all;">
         {{ patent.title }}
-        <span style="font-size:13px; color:#777; font-weight:normal; margin-left:6px;">({{ patent.patent_id }})</span>
+      </p>
+      
+      {# 특허번호: 바로 다음 줄, 굵은 글씨 #}
+      <p style="margin:0 0 8px 0; font-weight:bold; color:#555; font-size:13px; line-height:1.3;">
+        ({{ patent.patent_id }})
       </p>
       
       {# 구분선 #}
