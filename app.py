@@ -152,8 +152,8 @@ html_template_str = """
       {% for patent in patents %}
       <div style="display: flex; flex-direction: row; border: 1px solid #ddd; border-radius: 10px; background-color: #ffffff; box-sizing: border-box; overflow: hidden;">
 
-        <div style="width: 220px; min-width: 220px; display: flex; justify-content: center; align-items: center; padding: 6px 4px; border-right: 1px solid #eee; background-color: #fafafa;">
-          <img src="{{ patent.image_url }}" style="width:210px; height:210px; object-fit:contain; border-radius:6px; border:1px solid #eee; background-color:#fff;">
+        <div style="width: 300px; min-width: 300px; display: flex; justify-content: center; align-items: center; padding: 6px 4px; border-right: 1px solid #eee; background-color: #fafafa;">
+          <img src="{{ patent.image_url }}" style="width:250px; height:250px; object-fit:contain; border-radius:6px; border:1px solid #eee; background-color:#fff;">
         </div>
 
         <div style="flex: 1; display: flex; flex-direction: column; padding: 15px 18px;">
