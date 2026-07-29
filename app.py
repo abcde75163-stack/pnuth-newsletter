@@ -6,18 +6,18 @@ import json
 import base64
 import requests
 import math
-from google import genai
+import anthropic
 from jinja2 import Template
  
 # ==========================================
 # 1. 시스템 설정 (Streamlit Secrets 필수 등록)
 # ==========================================
-API_KEY = st.secrets["GEMINI_API_KEY"]
+ANTHROPIC_API_KEY = st.secrets["ANTHROPIC_API_KEY"]
 GH_TOKEN = st.secrets["GITHUB_TOKEN"]
 GH_REPO = st.secrets["GITHUB_REPO"]
  
-MODEL_ID = "gemini-2.5-flash-lite"
-client = genai.Client(api_key=API_KEY)
+MODEL_ID = "claude-sonnet-5"
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
  
 # 고정 리소스 및 배너 URL
 LOGO_URL = "https://lh3.googleusercontent.com/d/1WjzjlOOetztrcgq6rioAZxTzi_K-JwLl"
@@ -56,6 +56,15 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
             return f"https://{user_id}.github.io/{repo_name}/{file_name}"
         else:
             return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
+
+    # ===== [디버깅용 임시 코드] =====
+    file_size_mb = len(file_content) / (1024 * 1024)
+    st.error(
+        f"🔍 [디버그] GitHub 업로드 실패 — 파일: {file_name} | "
+        f"크기: {file_size_mb:.2f}MB | status_code: {put_res.status_code}"
+    )
+    st.code(put_res.text[:500], language="json")
+    # ===== [디버깅용 임시 코드 끝] =====
  
     return "https://via.placeholder.com/220?text=Upload+Error"
  
@@ -71,47 +80,64 @@ def analyze_pdf_document(file_obj, test_mode=False):
             "category": "테스트분야"
         }
  
-    temp_path = f"temp_{int(time.time())}.pdf"
-    max_retries = 3
- 
+    max_retries = 4
+    # 일시적(재시도 가능) 오류로 간주할 상태코드/키워드
+    RETRYABLE_MARKERS = ["429", "500", "502", "503", "504", "529", "overloaded", "UNAVAILABLE", "timeout", "Timeout"]
+
+    pdf_base64 = base64.b64encode(file_obj.getvalue()).decode("utf-8")
+    prompt = """
+    특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요. 다른 설명 없이 JSON 객체 하나만 출력하세요.
+    - title: 기술 명칭
+    - summary: 주요 특징을 3개 문장 리스트로 요약
+    - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료' 등. 공백/줄바꿈 제거 단일 단어)
+    """
+
     for attempt in range(max_retries):
         try:
-            with open(temp_path, "wb") as f:
-                f.write(file_obj.getbuffer())
-            with open(temp_path, "rb") as f:
-                uploaded_doc = client.files.upload(file=f, config={'mime_type': 'application/pdf'})
- 
-            prompt = """
-            특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요.
-            - title: 기술 명칭
-            - summary: 주요 특징을 3개 문장 리스트로 요약
-            - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료' 등. 공백/줄바꿈 제거 단일 단어)
-            """
-            response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
-            raw_text = response.text.replace("```json", "").replace("```", "").strip()
-
-            # ===== [디버깅용 임시 코드] =====
-            st.warning("🔍 [디버그] Gemini 원본 응답 (raw_text)")
-            st.code(raw_text, language="json")
+            response = client.messages.create(
+                model=MODEL_ID,
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_base64
+                            }
+                        },
+                        {"type": "text", "text": prompt}
+                    ]
+                }]
+            )
+            raw_text = "".join(
+                block.text for block in response.content if block.type == "text"
+            )
+            raw_text = raw_text.replace("```json", "").replace("```", "").strip()
             parsed = json.loads(raw_text)
-            st.write(f"🔍 [디버그] 파싱 결과 타입: {type(parsed)}")
-            # ===== [디버깅용 임시 코드 끝] =====
+
+            # 모델이 JSON을 반환했더라도 dict가 아닌 형태(list 등)로 응답할 수 있어 방어적으로 검증
+            if isinstance(parsed, list):
+                parsed = parsed[0] if parsed and isinstance(parsed[0], dict) else {}
+            if not isinstance(parsed, dict):
+                raise ValueError(f"예상치 못한 응답 형식(type={type(parsed).__name__})")
 
             return parsed
- 
+
         except Exception as e:
             err_str = str(e)
-            if "429" in err_str:
-                wait = 30 * (attempt + 1)
-                st.warning(f"API 한도 초과, {wait}초 후 재시도... ({attempt+1}/{max_retries})")
+            is_retryable = any(marker in err_str for marker in RETRYABLE_MARKERS)
+
+            if is_retryable and attempt < max_retries - 1:
+                wait = min(60, (2 ** attempt) * 5)  # 5s, 10s, 20s, 40s... 지수 백오프 (최대 60초)
+                st.warning(f"일시적 오류({err_str[:60]}), {wait}초 후 재시도... ({attempt+1}/{max_retries})")
                 time.sleep(wait)
                 continue
             else:
                 return {"title": "분석 지연", "summary": [f"사유: {err_str[:50]}"], "category": "기타"}
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
- 
+
     return {"title": "분석 지연", "summary": ["재시도 횟수 초과"], "category": "기타"}
  
 def group_patents_by_category(patent_list):
