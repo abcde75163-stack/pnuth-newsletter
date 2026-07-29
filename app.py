@@ -57,15 +57,7 @@ def upload_file_to_github(file_obj, patent_id, folder_name):
         else:
             return f"https://raw.githubusercontent.com/{user_id}/{repo_name}/main/{file_name}"
 
-    # ===== [디버깅용 임시 코드] =====
-    file_size_mb = len(file_content) / (1024 * 1024)
-    st.error(
-        f"🔍 [디버그] GitHub 업로드 실패 — 파일: {file_name} | "
-        f"크기: {file_size_mb:.2f}MB | status_code: {put_res.status_code}"
-    )
-    st.code(put_res.text[:500], language="json")
-    # ===== [디버깅용 임시 코드 끝] =====
- 
+    st.warning(f"⚠️ 업로드 실패: {file_name} (status: {put_res.status_code})")
     return "https://via.placeholder.com/220?text=Upload+Error"
  
 def analyze_pdf_document(file_obj, test_mode=False):
@@ -87,8 +79,14 @@ def analyze_pdf_document(file_obj, test_mode=False):
     pdf_base64 = base64.b64encode(file_obj.getvalue()).decode("utf-8")
     prompt = """
     특허 기술요약서(SMK) PDF를 분석하여 JSON 형식으로만 응답하세요. 다른 설명 없이 JSON 객체 하나만 출력하세요.
-    - title: 기술 명칭
-    - summary: 주요 특징을 3개 문장 리스트로 요약
+
+    - title: 기술 명칭 (간결하게, 15자 내외 권장)
+    - summary: 이 기술을 도입/이전받을 기업 담당자가 빠르게 훑어볼 수 있도록, 아래 기준으로 정확히 3개 문장으로 요약
+        1) 무엇을 해결/제공하는 기술인지 (핵심 기능 한 줄)
+        2) 핵심 차별점 또는 기존 기술 대비 장점 한 줄
+        3) 활용/적용 가능 분야 또는 기대 효과 한 줄
+      각 문장은 35자 내외로 간결하게 작성하고, 세부 구성요소를 나열하는 명세서식 표현(예: 다중관 구조, 파라미터명 등)은 배제한 채
+      비전문가도 이해할 수 있는 쉬운 비즈니스 언어로 작성하세요. 한 문장에 여러 절을 쉼표로 길게 이어붙이지 말고 짧고 명확하게 끊어 쓰세요.
     - category: 문서 좌측 상단 로고 영역에 명시되어 있는 기술 분야 (예: '정보통신', '재료' 등. 공백/줄바꿈 제거 단일 단어)
     """
 
