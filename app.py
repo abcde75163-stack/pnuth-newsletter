@@ -1,4 +1,3 @@
-
 import streamlit as st
 import os
 import time
@@ -90,7 +89,15 @@ def analyze_pdf_document(file_obj, test_mode=False):
             """
             response = client.models.generate_content(model=MODEL_ID, contents=[uploaded_doc, prompt])
             raw_text = response.text.replace("```json", "").replace("```", "").strip()
-            return json.loads(raw_text)
+
+            # ===== [디버깅용 임시 코드] =====
+            st.warning("🔍 [디버그] Gemini 원본 응답 (raw_text)")
+            st.code(raw_text, language="json")
+            parsed = json.loads(raw_text)
+            st.write(f"🔍 [디버그] 파싱 결과 타입: {type(parsed)}")
+            # ===== [디버깅용 임시 코드 끝] =====
+
+            return parsed
  
         except Exception as e:
             err_str = str(e)
